@@ -1,0 +1,13 @@
+---
+description: Security rules for PIN handling, data storage encryption, and authentication
+alwaysApply: true
+---
+
+# Security Rules
+
+- PIN hashing: SHA-256 using the crypto package
+- Never log PINs, even hashed ones
+- Locked apps list stored in SharedPreferences must be encrypted
+- Profile data in sqflite must never include raw PINs
+- Auth should support both PIN and Biometric (BiometricPrompt)
+- Each profile can only be edited after entering that profile's own PIN

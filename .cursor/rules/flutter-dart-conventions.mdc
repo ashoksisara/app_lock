@@ -1,0 +1,54 @@
+---
+description: Flutter and Dart naming conventions, widget patterns, model structure, service rules, Riverpod usage, and UI/UX standards
+globs: **/*.dart
+alwaysApply: false
+---
+
+# Flutter / Dart Conventions
+
+## Naming
+
+- Files: snake_case (`user_profile.dart`)
+- Classes: PascalCase (`UserProfile`)
+- Variables/methods: camelCase (`getUserProfile`)
+- Constants: camelCase with const (`const primaryColor`)
+- Private members: _camelCase (`_hashedPin`)
+
+## Widgets
+
+- Screens end with `Screen` (HomeScreen, LockScreen)
+- Reusable widgets end with their role (ProfileCard, PinInput)
+- Extract any widget >50 lines into its own file
+- Always provide a key parameter to stateful widgets
+
+## Models
+
+All models must have: a named constructor, `fromMap()` factory, `toMap()` method, and `copyWith()` method.
+
+## Services
+
+- All services must be a class with private constructor
+- Database operations only in DatabaseService
+- Platform channel calls only in AppLockService
+- Auth logic only in AuthService
+
+## Riverpod State Management
+
+- StateNotifierProvider for complex state
+- FutureProvider for async data fetching
+- Provider for simple dependencies (services, repos)
+- All providers defined in their feature folder
+- Never use context.read() inside build() — use ref.watch()
+
+## UI / UX — Material 3
+
+- Use Material 3 (useMaterial3: true in ThemeData) for all UI
+- Build themes with ColorScheme.fromSeed() — never manually pick individual component colors
+- Use M3 components: FilledButton, OutlinedButton, SearchBar, NavigationBar, SegmentedButton, InputChip, etc.
+- Use M3 typography via Theme.of(context).textTheme (displayLarge, titleMedium, bodySmall, etc.)
+- Use M3 elevation and surface tint system — avoid manual BoxShadow for elevated surfaces
+- Support light and dark mode via separate ColorScheme seeds
+- Lock screen: clean, minimal — just PIN input and profile name, showing which partner's app is protected
+- All screens must handle loading, error, and empty states
+- Use smooth transitions between screens (MaterialPageRoute or page transitions API)
+- Friendly design: warm colors, emoji support for profile avatars

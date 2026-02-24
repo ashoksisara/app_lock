@@ -1,0 +1,18 @@
+---
+description: Git commit conventions and performance constraints for the background service and UI
+alwaysApply: true
+---
+
+# Git Rules
+
+- Commit messages: `feat:`, `fix:`, `chore:`, `refactor:`, `ui:`
+- Never commit commented-out code
+- Never commit debug prints
+- Each feature should be on its own branch
+
+# Performance Rules
+
+- Background service checks foreground app every 500ms — do not reduce below this
+- Dispose all controllers and listeners in dispose()
+- Use lazy loading for the installed apps list (can be 100+ apps)
+- Cache app icons after first load — do not reload on every render

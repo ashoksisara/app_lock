@@ -1,0 +1,49 @@
+---
+description: Project overview, tech stack, folder structure, and general coding rules for the Multi-Profile App Locker
+alwaysApply: true
+---
+
+# Multi-Profile App Locker — Project Overview
+
+Flutter app for Android: two partners on the same device lock their own apps with separate PINs.
+Flutter handles UI, Kotlin handles background services (foreground service, usage stats, overlay).
+
+## Tech Stack
+
+- Flutter (Dart) — UI and app logic
+- Kotlin — Native Android (foreground service, usage stats, overlay)
+- Riverpod — State management
+- sqflite — Local database
+- Platform Channels — Flutter ↔ Kotlin communication
+- SharedPreferences — Shared data between Flutter and native service
+
+## Folder Structure
+
+- `lib/features/{feature_name}/` — feature screens, with optional `widgets/` subfolder
+- `lib/shared/widgets/` — reusable widgets
+- `lib/models/` — data models
+- `lib/services/` — service classes
+- `lib/core/constants/` — AppColors, AppStrings, AppDimensions
+- `android/app/src/main/kotlin/com/multiprofilelock/` — native Kotlin files
+
+## General Always
+
+- Use Riverpod for state management, never setState except simple local UI
+- Use async/await, never .then() callbacks
+- Handle all errors with try/catch and show user-friendly messages
+- Use named routes for all navigation
+- Keep widgets small and single responsibility
+- Use const constructors wherever possible
+- All colors from AppColors, all strings from AppStrings, all spacing from AppDimensions
+- Hash PINs using SHA-256 before storing — never store plain text PINs
+- Every new file must have a top comment explaining its purpose
+
+## General Never
+
+- Never store plain text PINs
+- Never use var when type can be inferred or explicit
+- Never use dynamic types unless absolutely necessary
+- Never put business logic inside UI widgets
+- Never call platform channels directly from UI — go through a service
+- Never hardcode package names, colors, strings, or dimensions
+- Never use print() — use debugPrint()
