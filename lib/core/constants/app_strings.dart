@@ -90,4 +90,10 @@ class AppStrings {
   static const String noProfilesTitle = 'No Profiles Yet';
   static const String noProfilesDescription =
       'Create your first profile to start locking apps with your own PIN.';
+
+  // Profile Setup — Validation & Emoji Picker
+  static const String chooseAvatar = 'Choose Avatar';
+  static const String profileNameRequired = 'Please enter a profile name';
+  static const String pinsDoNotMatch = 'PINs do not match. Try again.';
+  static const String profileCreated = 'Profile created!';
 }

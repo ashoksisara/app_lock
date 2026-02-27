@@ -1,34 +1,172 @@
 // Profile setup wizard — step 1: avatar & name, step 2: set PIN, step 3: confirm PIN
 import 'package:flutter/material.dart';
 
+import '../../app/routes.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/constants/app_strings.dart';
 import 'widgets/emoji_avatar_picker.dart';
 import 'widgets/pin_setup_field.dart';
 import 'widgets/step_indicator.dart';
 
-class ProfileSetupScreen extends StatelessWidget {
+class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
 
-  static const int _currentStep = 1;
+  @override
+  State<ProfileSetupScreen> createState() => _ProfileSetupScreenState();
+}
+
+class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
+  int _currentStep = 1;
+  String _selectedEmoji = '🧑';
+  final TextEditingController _nameController = TextEditingController();
+  String _nameError = '';
+  String _pin = '';
+  String _confirmPin = '';
+  bool _pinMismatch = false;
+
+  bool get _isNameValid => _nameController.text.trim().isNotEmpty;
+  bool get _isPinComplete => _pin.length == 4;
+  bool get _isConfirmPinComplete => _confirmPin.length == 4;
+
+  void _goToStep(int step) {
+    setState(() {
+      _currentStep = step;
+      _pinMismatch = false;
+    });
+  }
+
+  void _handleNext() {
+    switch (_currentStep) {
+      case 1:
+        if (!_isNameValid) {
+          setState(() => _nameError = AppStrings.profileNameRequired);
+          return;
+        }
+        _goToStep(2);
+      case 2:
+        if (_isPinComplete) {
+          _goToStep(3);
+        }
+      case 3:
+        if (_isConfirmPinComplete) {
+          _validateAndSave();
+        }
+    }
+  }
+
+  void _handleBack() {
+    if (_currentStep > 1) {
+      setState(() {
+        if (_currentStep == 3) {
+          _confirmPin = '';
+          _pinMismatch = false;
+        } else if (_currentStep == 2) {
+          _pin = '';
+        }
+        _currentStep--;
+      });
+    } else {
+      Navigator.pop(context);
+    }
+  }
+
+  void _onPinKeyPressed(String key) {
+    setState(() {
+      if (_currentStep == 2 && _pin.length < 4) {
+        _pin += key;
+      } else if (_currentStep == 3 && _confirmPin.length < 4) {
+        _pinMismatch = false;
+        _confirmPin += key;
+      }
+    });
+  }
+
+  void _onPinBackspace() {
+    setState(() {
+      if (_currentStep == 2 && _pin.isNotEmpty) {
+        _pin = _pin.substring(0, _pin.length - 1);
+      } else if (_currentStep == 3 && _confirmPin.isNotEmpty) {
+        _pinMismatch = false;
+        _confirmPin = _confirmPin.substring(0, _confirmPin.length - 1);
+      }
+    });
+  }
+
+  void _validateAndSave() {
+    if (_pin != _confirmPin) {
+      setState(() {
+        _pinMismatch = true;
+        _confirmPin = '';
+      });
+      return;
+    }
+
+    // TODO: Save profile via provider/service
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(AppStrings.profileCreated),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.paddingSmall),
+        ),
+      ),
+    );
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      AppRoutes.home,
+      (Route<dynamic> route) => false,
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController.addListener(() {
+      if (_nameError.isNotEmpty && _nameController.text.trim().isNotEmpty) {
+        setState(() => _nameError = '');
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
+    return PopScope(
+      canPop: _currentStep == 1,
+      onPopInvokedWithResult: (bool didPop, dynamic result) {
+        if (!didPop) {
+          _handleBack();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: _handleBack,
+          ),
+          title: const Text(AppStrings.newProfile),
         ),
-        title: const Text(AppStrings.newProfile),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            const StepIndicator(currentStep: _currentStep),
-            Expanded(child: _buildCurrentStep(context)),
-            _buildBottomButton(context),
-          ],
+        body: SafeArea(
+          child: Column(
+            children: [
+              StepIndicator(currentStep: _currentStep),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: KeyedSubtree(
+                    key: ValueKey<int>(_currentStep),
+                    child: _buildCurrentStep(context),
+                  ),
+                ),
+              ),
+              _buildBottomButton(context),
+            ],
+          ),
         ),
       ),
     );
@@ -57,14 +195,21 @@ class ProfileSetupScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const EmojiAvatarPicker(emoji: '🧑'),
+            EmojiAvatarPicker(
+              emoji: _selectedEmoji,
+              onEmojiSelected: (String emoji) {
+                setState(() => _selectedEmoji = emoji);
+              },
+            ),
             const SizedBox(height: AppDimensions.paddingLarge * 2),
             TextField(
+              controller: _nameController,
+              textCapitalization: TextCapitalization.words,
               decoration: InputDecoration(
                 labelText: AppStrings.profileName,
                 hintText: AppStrings.profileNameHint,
                 prefixIcon: const Icon(Icons.person),
-                counterText: '0/20',
+                errorText: _nameError.isNotEmpty ? _nameError : null,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(
                     AppDimensions.borderRadiusMedium,
@@ -113,9 +258,12 @@ class ProfileSetupScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppDimensions.paddingLarge * 2),
-        const PinDots(filledCount: 2),
+        PinDots(filledCount: _pin.length),
         const SizedBox(height: AppDimensions.paddingLarge * 2),
-        const NumberPad(),
+        NumberPad(
+          onKeyPressed: _onPinKeyPressed,
+          onBackspace: _onPinBackspace,
+        ),
       ],
     );
   }
@@ -141,22 +289,45 @@ class ProfileSetupScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppDimensions.paddingLarge * 2),
-        const PinDots(filledCount: 0),
-        const SizedBox(height: AppDimensions.paddingLarge * 2),
-        const NumberPad(),
+        PinDots(
+          filledCount: _confirmPin.length,
+          isError: _pinMismatch,
+        ),
+        const SizedBox(height: AppDimensions.paddingSmall),
+        AnimatedOpacity(
+          duration: const Duration(milliseconds: 300),
+          opacity: _pinMismatch ? 1.0 : 0.0,
+          child: Text(
+            AppStrings.pinsDoNotMatch,
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.error,
+            ),
+          ),
+        ),
+        const SizedBox(height: AppDimensions.paddingLarge),
+        NumberPad(
+          onKeyPressed: _onPinKeyPressed,
+          onBackspace: _onPinBackspace,
+        ),
       ],
     );
   }
 
   Widget _buildBottomButton(BuildContext context) {
     final bool isFinalStep = _currentStep == 3;
+    final bool isEnabled = switch (_currentStep) {
+      1 => true,
+      2 => _isPinComplete,
+      3 => _isConfirmPinComplete,
+      _ => false,
+    };
 
     return Padding(
       padding: const EdgeInsets.all(AppDimensions.paddingLarge),
       child: SizedBox(
         width: double.infinity,
         child: FilledButton.icon(
-          onPressed: () {},
+          onPressed: isEnabled ? _handleNext : null,
           icon: Icon(isFinalStep ? Icons.check : Icons.arrow_forward),
           label: Text(isFinalStep ? AppStrings.saveProfile : AppStrings.next),
         ),

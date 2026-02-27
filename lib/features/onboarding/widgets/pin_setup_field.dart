@@ -50,7 +50,14 @@ class PinDots extends StatelessWidget {
 }
 
 class NumberPad extends StatelessWidget {
-  const NumberPad({super.key});
+  final ValueChanged<String>? onKeyPressed;
+  final VoidCallback? onBackspace;
+
+  const NumberPad({
+    super.key,
+    this.onKeyPressed,
+    this.onBackspace,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -105,7 +112,9 @@ class NumberPad extends StatelessWidget {
         shape: const CircleBorder(),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: () {},
+          onTap: isBackspace
+              ? onBackspace
+              : () => onKeyPressed?.call(key),
           customBorder: const CircleBorder(),
           child: Center(
             child: isBackspace
