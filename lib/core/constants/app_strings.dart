@@ -96,4 +96,18 @@ class AppStrings {
   static const String profileNameRequired = 'Please enter a profile name';
   static const String pinsDoNotMatch = 'PINs do not match. Try again.';
   static const String profileCreated = 'Profile created!';
+
+  // Profile Actions
+  static const String deleteProfile = 'Delete Profile';
+  static const String deleteProfileConfirm =
+      'Are you sure you want to delete this profile? This cannot be undone.';
+  static const String cancel = 'Cancel';
+  static const String delete = 'Delete';
+  static const String profileDeleted = 'Profile deleted';
+  static const String selectAppsFor = 'Select Apps';
+  static const String createdOn = 'Created';
+
+  // PIN Verification Dialog
+  static const String enterPinToContinue = 'Enter PIN to continue';
+  static const String wrongPin = 'Wrong PIN. Try again.';
 }

@@ -6,6 +6,7 @@ import '../../app/routes.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/constants/app_strings.dart';
 import '../../models/user_profile.dart';
+import '../../shared/widgets/pin_verify_dialog.dart';
 import 'providers/profile_providers.dart';
 import 'widgets/profile_card.dart';
 
@@ -47,7 +48,7 @@ class HomeScreen extends ConsumerWidget {
         ),
         data: (List<UserProfile> profiles) => profiles.isEmpty
             ? _buildEmptyState(colorScheme, textTheme)
-            : _buildProfileList(context, colorScheme, profiles),
+            : _buildProfileList(context, ref, colorScheme, profiles),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
@@ -140,6 +141,7 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _buildProfileList(
     BuildContext context,
+    WidgetRef ref,
     ColorScheme colorScheme,
     List<UserProfile> profiles,
   ) {
@@ -163,9 +165,148 @@ class HomeScreen extends ConsumerWidget {
           name: profile.name,
           lockedAppsCount: 0,
           backgroundColor: cardColors[index % cardColors.length],
-          onTap: () {
-            // TODO: Navigate to profile detail / app selection
-          },
+          onTap: () => _showProfileSheet(context, ref, profile, colorScheme),
+        );
+      },
+    );
+  }
+
+  void _showProfileSheet(
+    BuildContext context,
+    WidgetRef ref,
+    UserProfile profile,
+    ColorScheme colorScheme,
+  ) {
+    final TextTheme textTheme = Theme.of(context).textTheme;
+    final String formattedDate =
+        '${profile.createdAt.day}/${profile.createdAt.month}/${profile.createdAt.year}';
+
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppDimensions.cardRadius),
+        ),
+      ),
+      builder: (BuildContext sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: AppDimensions.paddingLarge,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircleAvatar(
+                  radius: 36,
+                  backgroundColor: colorScheme.primaryContainer,
+                  child: Text(
+                    profile.emoji,
+                    style: const TextStyle(fontSize: 32),
+                  ),
+                ),
+                const SizedBox(height: AppDimensions.paddingMedium),
+                Text(
+                  profile.name,
+                  style: textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: AppDimensions.paddingSmall / 2),
+                Text(
+                  '${AppStrings.createdOn} $formattedDate',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: AppDimensions.paddingLarge),
+                ListTile(
+                  leading: const Icon(Icons.apps),
+                  title: const Text(AppStrings.selectAppsFor),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () async {
+                    Navigator.pop(sheetContext);
+                    final bool verified = await showPinVerifyDialog(
+                      context,
+                      profileId: profile.id!,
+                      profileName: profile.name,
+                      profileEmoji: profile.emoji,
+                    );
+                    if (!verified || !context.mounted) return;
+                    Navigator.pushNamed(context, AppRoutes.appSelection);
+                  },
+                ),
+                ListTile(
+                  leading: Icon(Icons.delete_outline, color: colorScheme.error),
+                  title: Text(
+                    AppStrings.deleteProfile,
+                    style: TextStyle(color: colorScheme.error),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(sheetContext);
+                    final bool verified = await showPinVerifyDialog(
+                      context,
+                      profileId: profile.id!,
+                      profileName: profile.name,
+                      profileEmoji: profile.emoji,
+                    );
+                    if (!verified || !context.mounted) return;
+                    _confirmDelete(context, ref, profile);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    UserProfile profile,
+  ) {
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text(AppStrings.deleteProfile),
+          content: Text(AppStrings.deleteProfileConfirm),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text(AppStrings.cancel),
+            ),
+            FilledButton(
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+                if (profile.id != null) {
+                  await ref
+                      .read(profileListProvider.notifier)
+                      .deleteProfile(profile.id!);
+                }
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text(AppStrings.profileDeleted),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppDimensions.paddingSmall),
+                    ),
+                  ),
+                );
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: colorScheme.error,
+                foregroundColor: colorScheme.onError,
+              ),
+              child: const Text(AppStrings.delete),
+            ),
+          ],
         );
       },
     );
