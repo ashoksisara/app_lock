@@ -116,4 +116,6 @@ class AppStrings {
   static const String noAppsFound = 'No apps found';
   static const String failedToLoadApps = 'Failed to load apps';
   static const String retry = 'Retry';
+  static const String saving = 'Saving...';
+  static const String appsSaved = 'Locked apps saved';
 }

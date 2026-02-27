@@ -8,8 +8,9 @@ class DatabaseService {
   static final DatabaseService instance = DatabaseService._();
 
   static const String _dbName = 'app_lock.db';
-  static const int _dbVersion = 1;
+  static const int _dbVersion = 2;
   static const String tableProfiles = 'profiles';
+  static const String tableLockedApps = 'locked_apps';
 
   Database? _database;
 
@@ -41,11 +42,26 @@ class DatabaseService {
         updated_at TEXT NOT NULL
       )
     ''');
+    await _createLockedAppsTable(db);
+  }
+
+  Future<void> _createLockedAppsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE $tableLockedApps (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        profile_id INTEGER NOT NULL,
+        package_name TEXT NOT NULL,
+        FOREIGN KEY (profile_id) REFERENCES $tableProfiles(id) ON DELETE CASCADE,
+        UNIQUE(profile_id, package_name)
+      )
+    ''');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Future schema migrations go here
     debugPrint('Database upgrade from v$oldVersion to v$newVersion');
+    if (oldVersion < 2) {
+      await _createLockedAppsTable(db);
+    }
   }
 
   Future<int> insert(String table, Map<String, dynamic> values) async {
@@ -81,5 +97,36 @@ class DatabaseService {
   Future<int> delete(String table, int id) async {
     final Database db = await database;
     return db.delete(table, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<List<Map<String, dynamic>>> queryWhere(
+    String table, {
+    required String where,
+    required List<Object?> whereArgs,
+  }) async {
+    final Database db = await database;
+    return db.query(table, where: where, whereArgs: whereArgs);
+  }
+
+  Future<int> deleteWhere(
+    String table, {
+    required String where,
+    required List<Object?> whereArgs,
+  }) async {
+    final Database db = await database;
+    return db.delete(table, where: where, whereArgs: whereArgs);
+  }
+
+  Future<int?> count(
+    String table, {
+    required String where,
+    required List<Object?> whereArgs,
+  }) async {
+    final Database db = await database;
+    final List<Map<String, dynamic>> result = await db.rawQuery(
+      'SELECT COUNT(*) as cnt FROM $table WHERE $where',
+      whereArgs,
+    );
+    return Sqflite.firstIntValue(result);
   }
 }

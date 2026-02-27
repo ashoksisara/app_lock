@@ -151,6 +151,9 @@ class HomeScreen extends ConsumerWidget {
       colorScheme.tertiaryContainer,
     ];
 
+    final Map<int, int> lockedCounts =
+        ref.watch(lockedAppsCountProvider).value ?? {};
+
     return ListView.separated(
       padding: const EdgeInsets.all(AppDimensions.paddingLarge).copyWith(
         bottom: AppDimensions.paddingLarge + 80,
@@ -160,10 +163,11 @@ class HomeScreen extends ConsumerWidget {
           const SizedBox(height: AppDimensions.paddingMedium),
       itemBuilder: (BuildContext context, int index) {
         final UserProfile profile = profiles[index];
+        final int count = lockedCounts[profile.id] ?? 0;
         return ProfileCard(
           emoji: profile.emoji,
           name: profile.name,
-          lockedAppsCount: 0,
+          lockedAppsCount: count,
           backgroundColor: cardColors[index % cardColors.length],
           onTap: () => _showProfileSheet(context, ref, profile, colorScheme),
         );
@@ -233,7 +237,11 @@ class HomeScreen extends ConsumerWidget {
                       profileEmoji: profile.emoji,
                     );
                     if (!verified || !context.mounted) return;
-                    Navigator.pushNamed(context, AppRoutes.appSelection);
+                    Navigator.pushNamed(
+                      context,
+                      AppRoutes.appSelection,
+                      arguments: profile.id,
+                    );
                   },
                 ),
                 ListTile(

@@ -58,7 +58,29 @@ class ProfileListNotifier extends AsyncNotifier<List<UserProfile>> {
     }
   }
 
+  Future<void> saveLockedApps(int profileId, List<String> packages) async {
+    final ProfileRepository repository = ref.read(profileRepositoryProvider);
+    try {
+      await repository.saveLockedApps(profileId, packages);
+      if (!ref.mounted) return;
+      ref.invalidate(lockedAppsCountProvider);
+    } catch (error) {
+      debugPrint('Failed to save locked apps: $error');
+    }
+  }
+
+  Future<List<String>> getLockedApps(int profileId) async {
+    final ProfileRepository repository = ref.read(profileRepositoryProvider);
+    return repository.getLockedApps(profileId);
+  }
+
   Future<void> reload() async {
     ref.invalidateSelf();
   }
 }
+
+final lockedAppsCountProvider =
+    FutureProvider<Map<int, int>>((Ref ref) async {
+  final ProfileRepository repository = ref.watch(profileRepositoryProvider);
+  return repository.getLockedAppsCountForAll();
+});

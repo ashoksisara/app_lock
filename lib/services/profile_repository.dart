@@ -53,7 +53,49 @@ class ProfileRepository {
     return PinHasher.verify(pin, profile.hashedPin);
   }
 
-  // TODO: Add remote sync methods here when online connectivity is implemented
-  // Future<void> syncProfiles() async { ... }
-  // Future<void> pushToRemote(UserProfile profile) async { ... }
+  Future<void> saveLockedApps(int profileId, List<String> packageNames) async {
+    await _db.deleteWhere(
+      DatabaseService.tableLockedApps,
+      where: 'profile_id = ?',
+      whereArgs: [profileId],
+    );
+    for (final String pkg in packageNames) {
+      await _db.insert(DatabaseService.tableLockedApps, {
+        'profile_id': profileId,
+        'package_name': pkg,
+      });
+    }
+  }
+
+  Future<List<String>> getLockedApps(int profileId) async {
+    final List<Map<String, dynamic>> rows = await _db.queryWhere(
+      DatabaseService.tableLockedApps,
+      where: 'profile_id = ?',
+      whereArgs: [profileId],
+    );
+    return rows.map((Map<String, dynamic> r) => r['package_name'] as String).toList();
+  }
+
+  Future<int> getLockedAppsCount(int profileId) async {
+    final int? count = await _db.count(
+      DatabaseService.tableLockedApps,
+      where: 'profile_id = ?',
+      whereArgs: [profileId],
+    );
+    return count ?? 0;
+  }
+
+  Future<Map<int, int>> getLockedAppsCountForAll() async {
+    final List<Map<String, dynamic>> rows = await _db.queryWhere(
+      DatabaseService.tableLockedApps,
+      where: '1 = 1',
+      whereArgs: [],
+    );
+    final Map<int, int> counts = {};
+    for (final Map<String, dynamic> row in rows) {
+      final int pid = row['profile_id'] as int;
+      counts[pid] = (counts[pid] ?? 0) + 1;
+    }
+    return counts;
+  }
 }

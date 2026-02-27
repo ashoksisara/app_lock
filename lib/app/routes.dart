@@ -33,8 +33,9 @@ class AppRoutes {
           builder: (_) => const ProfileSetupScreen(),
         );
       case appSelection:
+        final int profileId = routeSettings.arguments as int;
         return MaterialPageRoute(
-          builder: (_) => const AppSelectionScreen(),
+          builder: (_) => AppSelectionScreen(profileId: profileId),
         );
       case lockScreen:
         return MaterialPageRoute(

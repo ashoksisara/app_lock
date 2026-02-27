@@ -2,16 +2,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/routes.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/constants/app_strings.dart';
 import '../../models/installed_app.dart';
+import '../home/providers/profile_providers.dart';
 import 'providers/installed_apps_provider.dart';
 import 'widgets/app_tile.dart';
 import 'widgets/search_bar_widget.dart';
 import 'widgets/selected_count_bar.dart';
 
 class AppSelectionScreen extends ConsumerStatefulWidget {
-  const AppSelectionScreen({super.key});
+  final int profileId;
+
+  const AppSelectionScreen({super.key, required this.profileId});
 
   @override
   ConsumerState<AppSelectionScreen> createState() => _AppSelectionScreenState();
@@ -21,11 +25,24 @@ class _AppSelectionScreenState extends ConsumerState<AppSelectionScreen> {
   String _searchQuery = '';
   final Set<String> _selectedPackages = {};
   final TextEditingController _searchController = TextEditingController();
+  bool _loadedExisting = false;
+  bool _saving = false;
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadExistingLockedApps() async {
+    if (_loadedExisting) return;
+    _loadedExisting = true;
+    final List<String> existing = await ref
+        .read(profileListProvider.notifier)
+        .getLockedApps(widget.profileId);
+    if (mounted) {
+      setState(() => _selectedPackages.addAll(existing));
+    }
   }
 
   List<InstalledApp> _filterApps(List<InstalledApp> apps) {
@@ -43,6 +60,8 @@ class _AppSelectionScreenState extends ConsumerState<AppSelectionScreen> {
     final TextTheme textTheme = Theme.of(context).textTheme;
     final AsyncValue<List<InstalledApp>> appsState =
         ref.watch(installedAppsProvider);
+
+    appsState.whenData((_) => _loadExistingLockedApps());
 
     return Scaffold(
       appBar: AppBar(
@@ -65,12 +84,6 @@ class _AppSelectionScreenState extends ConsumerState<AppSelectionScreen> {
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(AppStrings.done),
-          ),
-        ],
       ),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
@@ -218,6 +231,19 @@ class _AppSelectionScreenState extends ConsumerState<AppSelectionScreen> {
     );
   }
 
+  Future<void> _onSaveAndContinue() async {
+    setState(() => _saving = true);
+    await ref
+        .read(profileListProvider.notifier)
+        .saveLockedApps(widget.profileId, _selectedPackages.toList());
+    if (!mounted) return;
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      AppRoutes.home,
+      (Route<dynamic> route) => false,
+    );
+  }
+
   Widget _buildBottomSaveButton(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
@@ -234,9 +260,17 @@ class _AppSelectionScreenState extends ConsumerState<AppSelectionScreen> {
         child: SizedBox(
           width: double.infinity,
           child: FilledButton.icon(
-            onPressed: () {},
-            icon: const Icon(Icons.lock),
-            label: const Text(AppStrings.saveAndContinue),
+            onPressed: _saving ? null : _onSaveAndContinue,
+            icon: _saving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.lock),
+            label: Text(_saving
+                ? AppStrings.saving
+                : AppStrings.saveAndContinue),
           ),
         ),
       ),
