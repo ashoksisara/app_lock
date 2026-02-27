@@ -1,20 +1,48 @@
 // Screen listing installed apps with checkboxes for locking selection
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_dimensions.dart';
 import '../../core/constants/app_strings.dart';
-import 'widgets/app_category_header.dart';
+import '../../models/installed_app.dart';
+import 'providers/installed_apps_provider.dart';
 import 'widgets/app_tile.dart';
 import 'widgets/search_bar_widget.dart';
 import 'widgets/selected_count_bar.dart';
 
-class AppSelectionScreen extends StatelessWidget {
+class AppSelectionScreen extends ConsumerStatefulWidget {
   const AppSelectionScreen({super.key});
 
   @override
+  ConsumerState<AppSelectionScreen> createState() => _AppSelectionScreenState();
+}
+
+class _AppSelectionScreenState extends ConsumerState<AppSelectionScreen> {
+  String _searchQuery = '';
+  final Set<String> _selectedPackages = {};
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<InstalledApp> _filterApps(List<InstalledApp> apps) {
+    if (_searchQuery.isEmpty) return apps;
+    final String query = _searchQuery.toLowerCase();
+    return apps.where((InstalledApp app) {
+      return app.name.toLowerCase().contains(query) ||
+          app.packageName.toLowerCase().contains(query);
+    }).toList();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+    final TextTheme textTheme = Theme.of(context).textTheme;
+    final AsyncValue<List<InstalledApp>> appsState =
+        ref.watch(installedAppsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -30,7 +58,7 @@ class AppSelectionScreen extends StatelessWidget {
               style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             Text(
-              'Profile 1 \u2022 Choose apps to lock',
+              'Choose apps to lock',
               style: textTheme.bodySmall?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
@@ -39,62 +67,155 @@ class AppSelectionScreen extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () {},
+            onPressed: () => Navigator.pop(context),
             child: const Text(AppStrings.done),
           ),
         ],
       ),
-      body: Column(
-        children: [
-          const SizedBox(height: AppDimensions.paddingSmall),
-          const SearchBarWidget(),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        behavior: HitTestBehavior.translucent,
+        child: Column(
+          children: [
+            const SizedBox(height: AppDimensions.paddingSmall),
+            SearchBarWidget(
+              controller: _searchController,
+              onChanged: (String value) {
+                setState(() => _searchQuery = value);
+              },
+              onClear: () {
+                setState(() => _searchQuery = '');
+              },
+            ),
           const SizedBox(height: AppDimensions.paddingSmall),
           SelectedCountBar(
-            selectedCount: 3,
-            onClearAll: () {},
+            selectedCount: _selectedPackages.length,
+            onClearAll: () {
+              setState(() => _selectedPackages.clear());
+            },
           ),
           Expanded(
-            child: ListView(
-              children: [
-                AppCategoryHeader(title: AppStrings.categorySocial),
-                ..._buildCategoryApps(_socialApps, colorScheme),
-                AppCategoryHeader(title: AppStrings.categoryGoogle),
-                ..._buildCategoryApps(_googleApps, colorScheme),
-                AppCategoryHeader(title: AppStrings.categoryEntertainment),
-                ..._buildCategoryApps(_entertainmentApps, colorScheme),
-                AppCategoryHeader(title: AppStrings.categoryOther),
-                ..._buildCategoryApps(_otherApps, colorScheme),
-                const SizedBox(height: AppDimensions.paddingLarge),
-              ],
+            child: appsState.when(
+              loading: () => _buildLoadingState(colorScheme),
+              error: (Object error, _) =>
+                  _buildErrorState(colorScheme, textTheme),
+              data: (List<InstalledApp> apps) {
+                final List<InstalledApp> filtered = _filterApps(apps);
+                if (filtered.isEmpty) {
+                  return _buildEmptyState(colorScheme, textTheme);
+                }
+                return _buildAppList(filtered, colorScheme);
+              },
             ),
           ),
-          _buildBottomSaveButton(context),
+            _buildBottomSaveButton(context),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingState(ColorScheme colorScheme) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircularProgressIndicator(),
+          const SizedBox(height: AppDimensions.paddingMedium),
+          Text(
+            AppStrings.loadingApps,
+            style: TextStyle(color: colorScheme.onSurfaceVariant),
+          ),
         ],
       ),
     );
   }
 
-  List<Widget> _buildCategoryApps(
-    List<Map<String, dynamic>> apps,
-    ColorScheme colorScheme,
-  ) {
-    final containerColors = [
+  Widget _buildErrorState(ColorScheme colorScheme, TextTheme textTheme) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimensions.paddingLarge),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline, size: 56, color: colorScheme.error),
+            const SizedBox(height: AppDimensions.paddingMedium),
+            Text(
+              AppStrings.failedToLoadApps,
+              style: textTheme.titleMedium?.copyWith(
+                color: colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: AppDimensions.paddingLarge),
+            FilledButton.tonalIcon(
+              onPressed: () {
+                ref.read(installedAppsProvider.notifier).reload();
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text(AppStrings.retry),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(ColorScheme colorScheme, TextTheme textTheme) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.search_off,
+            size: 56,
+            color: colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(height: AppDimensions.paddingMedium),
+          Text(
+            AppStrings.noAppsFound,
+            style: textTheme.titleMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAppList(List<InstalledApp> apps, ColorScheme colorScheme) {
+    final List<Color> containerColors = [
       colorScheme.primaryContainer,
       colorScheme.secondaryContainer,
       colorScheme.tertiaryContainer,
     ];
 
-    return apps.asMap().entries.map((entry) {
-      final app = entry.value;
-      return AppTile(
-        name: app['name'] as String,
-        packageName: app['package'] as String,
-        letter: app['letter'] as String,
-        avatarColor: containerColors[entry.key % containerColors.length],
-        isSelected: app['selected'] as bool,
-        onTap: () {},
-      );
-    }).toList();
+    return ListView.builder(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      itemCount: apps.length,
+      padding: const EdgeInsets.only(bottom: AppDimensions.paddingLarge),
+      itemBuilder: (BuildContext context, int index) {
+        final InstalledApp app = apps[index];
+        final bool isSelected = _selectedPackages.contains(app.packageName);
+
+        return AppTile(
+          name: app.name,
+          packageName: app.packageName,
+          letter: app.name.isNotEmpty ? app.name[0].toUpperCase() : '?',
+          avatarColor: containerColors[index % containerColors.length],
+          isSelected: isSelected,
+          icon: app.icon,
+          onTap: () {
+            setState(() {
+              if (isSelected) {
+                _selectedPackages.remove(app.packageName);
+              } else {
+                _selectedPackages.add(app.packageName);
+              }
+            });
+          },
+        );
+      },
+    );
   }
 
   Widget _buildBottomSaveButton(BuildContext context) {
@@ -122,27 +243,3 @@ class AppSelectionScreen extends StatelessWidget {
     );
   }
 }
-
-const List<Map<String, dynamic>> _socialApps = [
-  {'name': 'WhatsApp', 'package': 'com.whatsapp', 'letter': 'W', 'selected': true},
-  {'name': 'Instagram', 'package': 'com.instagram.android', 'letter': 'I', 'selected': false},
-  {'name': 'Telegram', 'package': 'org.telegram.messenger', 'letter': 'T', 'selected': true},
-];
-
-const List<Map<String, dynamic>> _googleApps = [
-  {'name': 'Gmail', 'package': 'com.google.android.gm', 'letter': 'G', 'selected': true},
-  {'name': 'Google Photos', 'package': 'com.google.android.apps.photos', 'letter': 'P', 'selected': false},
-  {'name': 'Google Drive', 'package': 'com.google.android.apps.docs', 'letter': 'D', 'selected': false},
-];
-
-const List<Map<String, dynamic>> _entertainmentApps = [
-  {'name': 'YouTube', 'package': 'com.google.android.youtube', 'letter': 'Y', 'selected': false},
-  {'name': 'Spotify', 'package': 'com.spotify.music', 'letter': 'S', 'selected': false},
-  {'name': 'Netflix', 'package': 'com.netflix.mediaclient', 'letter': 'N', 'selected': false},
-];
-
-const List<Map<String, dynamic>> _otherApps = [
-  {'name': 'Gallery', 'package': 'com.android.gallery3d', 'letter': 'G', 'selected': false},
-  {'name': 'File Manager', 'package': 'com.android.filemanager', 'letter': 'F', 'selected': false},
-  {'name': 'Calculator', 'package': 'com.android.calculator2', 'letter': 'C', 'selected': false},
-];

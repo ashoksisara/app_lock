@@ -110,4 +110,10 @@ class AppStrings {
   // PIN Verification Dialog
   static const String enterPinToContinue = 'Enter PIN to continue';
   static const String wrongPin = 'Wrong PIN. Try again.';
+
+  // Installed Apps
+  static const String loadingApps = 'Loading installed apps...';
+  static const String noAppsFound = 'No apps found';
+  static const String failedToLoadApps = 'Failed to load apps';
+  static const String retry = 'Retry';
 }
