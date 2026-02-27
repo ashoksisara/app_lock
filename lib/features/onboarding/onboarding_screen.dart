@@ -1,14 +1,54 @@
 // Welcome onboarding screen with 3 swipeable pages explaining the app
 import 'package:flutter/material.dart';
 
+import '../../app/routes.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/constants/app_strings.dart';
 import 'widgets/onboarding_bottom_bar.dart';
 import 'widgets/onboarding_dots_indicator.dart';
 import 'widgets/onboarding_page.dart';
 
-class OnboardingScreen extends StatelessWidget {
+class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
+
+  @override
+  State<OnboardingScreen> createState() => _OnboardingScreenState();
+}
+
+class _OnboardingScreenState extends State<OnboardingScreen> {
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController.addListener(_onPageChanged);
+  }
+
+  void _onPageChanged() {
+    final int page = _pageController.page?.round() ?? 0;
+    if (page != _currentPage) {
+      setState(() => _currentPage = page);
+    }
+  }
+
+  void _goToNextPage() {
+    _pageController.nextPage(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  void _completeOnboarding() {
+    Navigator.pushReplacementNamed(context, AppRoutes.profileSetup);
+  }
+
+  @override
+  void dispose() {
+    _pageController.removeListener(_onPageChanged);
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +62,7 @@ class OnboardingScreen extends StatelessWidget {
             children: [
               Expanded(
                 child: PageView(
-                  controller: PageController(),
+                  controller: _pageController,
                   physics: const BouncingScrollPhysics(),
                   children: [
                     OnboardingPage(
@@ -46,20 +86,31 @@ class OnboardingScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              const OnboardingDotsIndicator(activeIndex: 0),
+              OnboardingDotsIndicator(activeIndex: _currentPage),
               const SizedBox(height: AppDimensions.paddingMedium),
-              const OnboardingBottomBar(currentPage: 0),
+              OnboardingBottomBar(
+                currentPage: _currentPage,
+                onNext: _goToNextPage,
+                onGetStarted: _completeOnboarding,
+              ),
               const SizedBox(height: AppDimensions.paddingLarge),
             ],
           ),
           Positioned(
             top: mediaQuery.padding.top + AppDimensions.paddingLarge,
             right: AppDimensions.paddingMedium,
-            child: TextButton(
-              onPressed: () {},
-              child: Text(
-                AppStrings.skip,
-                style: TextStyle(color: colorScheme.onSurfaceVariant),
+            child: IgnorePointer(
+              ignoring: _currentPage >= 2,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 300),
+                opacity: _currentPage < 2 ? 1.0 : 0.0,
+                child: TextButton(
+                  onPressed: _completeOnboarding,
+                  child: Text(
+                    AppStrings.skip,
+                    style: TextStyle(color: colorScheme.onSurfaceVariant),
+                  ),
+                ),
               ),
             ),
           ),

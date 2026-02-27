@@ -6,10 +6,14 @@ import '../../../core/constants/app_strings.dart';
 
 class OnboardingBottomBar extends StatelessWidget {
   final int currentPage;
+  final VoidCallback? onNext;
+  final VoidCallback? onGetStarted;
 
   const OnboardingBottomBar({
     super.key,
     required this.currentPage,
+    this.onNext,
+    this.onGetStarted,
   });
 
   @override
@@ -30,7 +34,7 @@ class OnboardingBottomBar extends StatelessWidget {
                 width: double.infinity,
                 height: 56,
                 child: FilledButton.icon(
-                  onPressed: () {},
+                  onPressed: onGetStarted,
                   icon: const Icon(Icons.rocket_launch),
                   label: const Text(AppStrings.getStarted),
                   style: FilledButton.styleFrom(
@@ -47,7 +51,7 @@ class OnboardingBottomBar extends StatelessWidget {
                 children: [
                   const Spacer(),
                   FloatingActionButton(
-                    onPressed: () {},
+                    onPressed: onNext,
                     backgroundColor: colorScheme.primary,
                     foregroundColor: colorScheme.onPrimary,
                     child: const Icon(Icons.arrow_forward),
