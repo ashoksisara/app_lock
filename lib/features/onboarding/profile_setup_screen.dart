@@ -1,21 +1,24 @@
 // Profile setup wizard — step 1: avatar & name, step 2: set PIN, step 3: confirm PIN
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/routes.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/constants/app_strings.dart';
+import '../home/providers/profile_providers.dart';
 import 'widgets/emoji_avatar_picker.dart';
 import 'widgets/pin_setup_field.dart';
 import 'widgets/step_indicator.dart';
 
-class ProfileSetupScreen extends StatefulWidget {
+class ProfileSetupScreen extends ConsumerStatefulWidget {
   const ProfileSetupScreen({super.key});
 
   @override
-  State<ProfileSetupScreen> createState() => _ProfileSetupScreenState();
+  ConsumerState<ProfileSetupScreen> createState() =>
+      _ProfileSetupScreenState();
 }
 
-class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
+class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   int _currentStep = 1;
   String _selectedEmoji = '🧑';
   final TextEditingController _nameController = TextEditingController();
@@ -35,7 +38,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     });
   }
 
-  void _handleNext() {
+  Future<void> _handleNext() async {
     switch (_currentStep) {
       case 1:
         if (!_isNameValid) {
@@ -49,7 +52,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         }
       case 3:
         if (_isConfirmPinComplete) {
-          _validateAndSave();
+          await _validateAndSave();
         }
     }
   }
@@ -92,7 +95,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     });
   }
 
-  void _validateAndSave() {
+  bool _isSaving = false;
+
+  Future<void> _validateAndSave() async {
     if (_pin != _confirmPin) {
       setState(() {
         _pinMismatch = true;
@@ -101,21 +106,41 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       return;
     }
 
-    // TODO: Save profile via provider/service
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text(AppStrings.profileCreated),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppDimensions.paddingSmall),
+    setState(() => _isSaving = true);
+
+    try {
+      await ref.read(profileListProvider.notifier).addProfile(
+            name: _nameController.text.trim(),
+            emoji: _selectedEmoji,
+            pin: _pin,
+          );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(AppStrings.profileCreated),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.paddingSmall),
+          ),
         ),
-      ),
-    );
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      AppRoutes.home,
-      (Route<dynamic> route) => false,
-    );
+      );
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.home,
+        (Route<dynamic> route) => false,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to save profile. Please try again.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   @override
@@ -315,12 +340,13 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
   Widget _buildBottomButton(BuildContext context) {
     final bool isFinalStep = _currentStep == 3;
-    final bool isEnabled = switch (_currentStep) {
-      1 => true,
-      2 => _isPinComplete,
-      3 => _isConfirmPinComplete,
-      _ => false,
-    };
+    final bool isEnabled = !_isSaving &&
+        switch (_currentStep) {
+          1 => true,
+          2 => _isPinComplete,
+          3 => _isConfirmPinComplete,
+          _ => false,
+        };
 
     return Padding(
       padding: const EdgeInsets.all(AppDimensions.paddingLarge),
@@ -328,7 +354,16 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         width: double.infinity,
         child: FilledButton.icon(
           onPressed: isEnabled ? _handleNext : null,
-          icon: Icon(isFinalStep ? Icons.check : Icons.arrow_forward),
+          icon: _isSaving
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Icon(isFinalStep ? Icons.check : Icons.arrow_forward),
           label: Text(isFinalStep ? AppStrings.saveProfile : AppStrings.next),
         ),
       ),

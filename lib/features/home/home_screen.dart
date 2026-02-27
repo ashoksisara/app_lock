@@ -1,25 +1,23 @@
 // Home screen — displays profile cards, service status toggle, and add-profile FAB
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/routes.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/constants/app_strings.dart';
+import '../../models/user_profile.dart';
+import 'providers/profile_providers.dart';
+import 'widgets/profile_card.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  // TODO: Replace with real profile list from provider
-  final List<dynamic> _profiles = [];
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
     final TextTheme textTheme = Theme.of(context).textTheme;
+    final AsyncValue<List<UserProfile>> profileState =
+        ref.watch(profileListProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -39,9 +37,18 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: _profiles.isEmpty
-          ? _buildEmptyState(colorScheme, textTheme)
-          : _buildProfileList(colorScheme),
+      body: profileState.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (Object error, _) => _buildErrorState(
+          context,
+          colorScheme,
+          textTheme,
+          onRetry: () => ref.invalidate(profileListProvider),
+        ),
+        data: (List<UserProfile> profiles) => profiles.isEmpty
+            ? _buildEmptyState(colorScheme, textTheme)
+            : _buildProfileList(context, colorScheme, profiles),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           Navigator.pushNamed(context, AppRoutes.profileSetup);
@@ -64,7 +71,7 @@ class _HomeScreenState extends State<HomeScreen> {
               height: 120,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: colorScheme.primaryContainer.withOpacity(0.4),
+                color: colorScheme.primaryContainer.withValues(alpha: 0.4),
               ),
               child: Icon(
                 Icons.person_add_outlined,
@@ -95,18 +102,72 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildProfileList(ColorScheme colorScheme) {
-    // TODO: Build profile cards from real data
-    return const SizedBox.shrink();
+  Widget _buildErrorState(
+    BuildContext context,
+    ColorScheme colorScheme,
+    TextTheme textTheme, {
+    required VoidCallback onRetry,
+  }) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimensions.paddingLarge),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 56,
+              color: colorScheme.error,
+            ),
+            const SizedBox(height: AppDimensions.paddingMedium),
+            Text(
+              'Something went wrong',
+              style: textTheme.titleMedium?.copyWith(
+                color: colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: AppDimensions.paddingLarge),
+            FilledButton.tonalIcon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-    // ServiceStatusTile commented out for now
-    // ServiceStatusTile(
-    //   isActive: _isServiceActive,
-    //   onToggle: (bool value) {
-    //     setState(() {
-    //       _isServiceActive = value;
-    //     });
-    //   },
-    // ),
+  Widget _buildProfileList(
+    BuildContext context,
+    ColorScheme colorScheme,
+    List<UserProfile> profiles,
+  ) {
+    final List<Color> cardColors = [
+      colorScheme.primaryContainer,
+      colorScheme.secondaryContainer,
+      colorScheme.tertiaryContainer,
+    ];
+
+    return ListView.separated(
+      padding: const EdgeInsets.all(AppDimensions.paddingLarge).copyWith(
+        bottom: AppDimensions.paddingLarge + 80,
+      ),
+      itemCount: profiles.length,
+      separatorBuilder: (_, _) =>
+          const SizedBox(height: AppDimensions.paddingMedium),
+      itemBuilder: (BuildContext context, int index) {
+        final UserProfile profile = profiles[index];
+        return ProfileCard(
+          emoji: profile.emoji,
+          name: profile.name,
+          lockedAppsCount: 0,
+          backgroundColor: cardColors[index % cardColors.length],
+          onTap: () {
+            // TODO: Navigate to profile detail / app selection
+          },
+        );
+      },
+    );
   }
 }
