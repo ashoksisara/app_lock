@@ -85,4 +85,9 @@ class AppStrings {
   static const String onboardingDesc3 =
       'The moment someone opens your locked app, they\'ll need '
       'your PIN. Simple, private and secure.';
+
+  // Home Screen — Empty State
+  static const String noProfilesTitle = 'No Profiles Yet';
+  static const String noProfilesDescription =
+      'Create your first profile to start locking apps with your own PIN.';
 }

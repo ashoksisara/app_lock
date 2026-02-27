@@ -40,7 +40,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _completeOnboarding() {
-    Navigator.pushReplacementNamed(context, AppRoutes.profileSetup);
+    Navigator.pushNamedAndRemoveUntil(context, AppRoutes.home, (route) => false);
   }
 
   @override
