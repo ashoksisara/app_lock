@@ -8,7 +8,9 @@ import '../features/app_selection/providers/installed_apps_provider.dart';
 import 'routes.dart';
 
 class App extends ConsumerWidget {
-  const App({super.key});
+  final bool onboardingDone;
+
+  const App({super.key, required this.onboardingDone});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -27,7 +29,7 @@ class App extends ConsumerWidget {
         colorSchemeSeed: AppColors.seedColor,
         brightness: Brightness.dark,
       ),
-      initialRoute: AppRoutes.onboarding,
+      initialRoute: onboardingDone ? AppRoutes.home : AppRoutes.onboarding,
       onGenerateRoute: AppRoutes.onGenerateRoute,
     );
   }

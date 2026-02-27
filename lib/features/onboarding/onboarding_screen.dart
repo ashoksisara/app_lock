@@ -1,5 +1,6 @@
 // Welcome onboarding screen with 3 swipeable pages explaining the app
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../app/routes.dart';
 import '../../core/constants/app_dimensions.dart';
@@ -39,7 +40,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  void _completeOnboarding() {
+  static const String _onboardingCompleteKey = 'onboarding_complete';
+
+  Future<void> _completeOnboarding() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_onboardingCompleteKey, true);
+    if (!mounted) return;
     Navigator.pushNamedAndRemoveUntil(context, AppRoutes.home, (route) => false);
   }
 
