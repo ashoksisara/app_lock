@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_dimensions.dart';
 import '../../core/constants/app_strings.dart';
+import '../../core/providers/color_provider.dart';
 import '../../core/providers/relock_timing_provider.dart';
 import '../../core/providers/theme_provider.dart';
 import '../../features/home/providers/profile_providers.dart';
@@ -24,6 +25,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
   bool _useBiometrics = true;
   bool _intruderDetection = false;
   bool _serviceRunning = false;
+  bool _colorsExpanded = false;
 
   @override
   void initState() {
@@ -210,20 +212,77 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
 
   Widget _buildAppearanceSection() {
     final ThemeMode mode = ref.watch(themeModeProvider);
+    final Color selectedColor = ref.watch(seedColorProvider);
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
     final bool isDark = mode == ThemeMode.dark ||
         (mode == ThemeMode.system &&
             MediaQuery.platformBrightnessOf(context) == Brightness.dark);
+
     return SettingsSection(
       title: AppStrings.sectionAppearance,
       children: [
-        SettingsTile(
-          icon: isDark ? Icons.dark_mode : Icons.dark_mode_outlined,
-          title: AppStrings.darkMode,
-          toggleValue: isDark,
-          onToggleChanged: (bool value) {
-            ref.read(themeModeProvider.notifier).setDarkMode(value);
+        ListTile(
+          leading: Icon(
+            isDark ? Icons.dark_mode : Icons.light_mode,
+            color: colorScheme.onSurfaceVariant,
+          ),
+          title: const Text(AppStrings.darkMode),
+          trailing: Switch(
+            value: isDark,
+            onChanged: (bool value) {
+              ref.read(themeModeProvider.notifier).setMode(
+                    value ? ThemeMode.dark : ThemeMode.light,
+                  );
+            },
+          ),
+          onTap: () {
+            setState(() {
+              _colorsExpanded = !_colorsExpanded;
+            });
           },
         ),
+        AnimatedCrossFade(
+          firstChild: const SizedBox.shrink(),
+          secondChild: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: seedColorOptions.map((Color color) {
+                final bool isSelected =
+                    color.toARGB32() == selectedColor.toARGB32();
+                return GestureDetector(
+                  onTap: () {
+                    ref.read(seedColorProvider.notifier).setColor(color);
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                      border: isSelected
+                          ? Border.all(
+                              color: colorScheme.onSurface,
+                              width: 3,
+                            )
+                          : null,
+                    ),
+                    child: isSelected
+                        ? const Icon(Icons.check, color: Colors.white, size: 20)
+                        : null,
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          crossFadeState: _colorsExpanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 250),
+        ),
+        const Divider(height: 1, indent: 16, endIndent: 16),
         SettingsTile(
           icon: Icons.language,
           title: AppStrings.appLanguage,

@@ -35,6 +35,10 @@ class AppStrings {
   static const String relockUntilScreenOff = 'Until screen off';
   static const String backgroundService = 'Background Service';
   static const String darkMode = 'Dark Mode';
+  static const String themeColor = 'Theme Color';
+  static const String themeSystem = 'System';
+  static const String themeLight = 'Light';
+  static const String themeDark = 'Dark';
   static const String appLanguage = 'App Language';
   static const String appVersion = 'App Version';
   static const String privacyPolicy = 'Privacy Policy';

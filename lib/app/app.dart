@@ -2,8 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/constants/app_colors.dart';
 import '../core/constants/app_strings.dart';
+import '../core/providers/color_provider.dart';
 import '../core/providers/theme_provider.dart';
 import '../features/app_selection/providers/installed_apps_provider.dart';
 import '../features/home/home_screen.dart';
@@ -19,18 +19,19 @@ class App extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.read(installedAppsProvider);
     final ThemeMode themeMode = ref.watch(themeModeProvider);
+    final Color seedColor = ref.watch(seedColorProvider);
 
     return MaterialApp(
       title: AppStrings.appName,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: AppColors.seedColor,
+        colorSchemeSeed: seedColor,
         brightness: Brightness.light,
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: AppColors.seedColor,
+        colorSchemeSeed: seedColor,
         brightness: Brightness.dark,
       ),
       themeMode: themeMode,

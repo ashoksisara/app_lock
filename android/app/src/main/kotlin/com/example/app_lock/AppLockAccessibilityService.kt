@@ -57,10 +57,9 @@ class AppLockAccessibilityService : AccessibilityService() {
     private val unlockReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val pkg = intent?.getStringExtra(EXTRA_PACKAGE_NAME) ?: return
-            val now = System.currentTimeMillis()
-            cooldownMap[pkg] = now
-            Log.d(TAG, "UNLOCK pkg=$pkg time=$now lastFg=$lastForegroundPackage overlayShowing=${lockOverlay?.isShowing}")
+            cooldownMap[pkg] = System.currentTimeMillis()
             lockOverlay?.dismiss()
+            Log.d(TAG, "Unlock cooldown set for $pkg")
         }
     }
 
@@ -99,12 +98,6 @@ class AppLockAccessibilityService : AccessibilityService() {
 
         if (!isProtectionEnabled()) return
 
-        val eventTypeName = when (event.eventType) {
-            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> "STATE_CHANGED"
-            AccessibilityEvent.TYPE_WINDOWS_CHANGED -> "WINDOWS_CHANGED"
-            else -> "OTHER(${event.eventType})"
-        }
-
         val pkg: String? = when (event.eventType) {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
                 event.packageName?.toString()
@@ -124,7 +117,6 @@ class AppLockAccessibilityService : AccessibilityService() {
         lastProcessedPackage = pkg
         lastProcessedTime = now
 
-        Log.d(TAG, "EVENT $eventTypeName pkg=$pkg lastFg=$lastForegroundPackage overlay=${lockOverlay?.isShowing} cooldown=${cooldownMap.containsKey(pkg)} timing=${getRelockTimingMs()}")
         handleForegroundApp(pkg)
     }
 
@@ -160,24 +152,12 @@ class AppLockAccessibilityService : AccessibilityService() {
 
     private fun isWithinCooldown(pkg: String, now: Long): Boolean {
         val timing = getRelockTimingMs()
-        val cooldownTime = cooldownMap[pkg]
-        if (cooldownTime == null) {
-            Log.d(TAG, "COOLDOWN pkg=$pkg → NO ENTRY")
-            return false
-        }
+        val cooldownTime = cooldownMap[pkg] ?: return false
         if (timing == 0L) {
-            val result = lastForegroundPackage == null || lastForegroundPackage == pkg
-            Log.d(TAG, "COOLDOWN pkg=$pkg timing=0 lastFg=$lastForegroundPackage → $result")
-            return result
+            return lastForegroundPackage == null || lastForegroundPackage == pkg
         }
-        if (timing == -1L) {
-            Log.d(TAG, "COOLDOWN pkg=$pkg timing=-1 → true (until screen off)")
-            return true
-        }
-        val elapsed = now - cooldownTime
-        val result = elapsed < timing
-        Log.d(TAG, "COOLDOWN pkg=$pkg timing=$timing elapsed=$elapsed → $result")
-        return result
+        if (timing == -1L) return true
+        return now - cooldownTime < timing
     }
 
     private fun queryLauncherPackages(): Set<String> {
@@ -229,10 +209,7 @@ class AppLockAccessibilityService : AccessibilityService() {
             return
         }
 
-        if (!isLaunchableApp(foreground)) {
-            Log.d(TAG, "Skipping non-launchable $foreground (keyboard/system)")
-            return
-        }
+        if (!isLaunchableApp(foreground)) return
 
         handleWhileOverlayHidden(foreground, db, now)
     }
@@ -267,10 +244,8 @@ class AppLockAccessibilityService : AccessibilityService() {
     }
 
     private fun handleWhileOverlayHidden(foreground: String, db: LockDatabase, now: Long) {
-        Log.d(TAG, "HIDDEN foreground=$foreground lastFg=$lastForegroundPackage")
         if (isWithinCooldown(foreground, now)) {
             lastForegroundPackage = foreground
-            Log.d(TAG, "HIDDEN → skipped (cooldown)")
             return
         }
 
@@ -285,7 +260,6 @@ class AppLockAccessibilityService : AccessibilityService() {
             return
         }
 
-        Log.d(TAG, "HIDDEN → LOCKING $foreground")
         lastForegroundPackage = foreground
         showLockOverlay(foreground, profiles)
     }
