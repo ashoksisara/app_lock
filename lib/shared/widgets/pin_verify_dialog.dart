@@ -44,9 +44,12 @@ class _PinVerifyDialogState extends State<PinVerifyDialog> {
   String _enteredPin = '';
   bool _isError = false;
   bool _isVerifying = false;
+  bool _isSuccess = false;
 
   void _onKeyPressed(String key) {
-    if (_isVerifying || _isError || _enteredPin.length >= 4) return;
+    if (_isVerifying || _isError || _isSuccess || _enteredPin.length >= 4) {
+      return;
+    }
 
     setState(() => _enteredPin += key);
 
@@ -56,8 +59,10 @@ class _PinVerifyDialogState extends State<PinVerifyDialog> {
   }
 
   void _onBackspace() {
-    if (_isVerifying || _isError || _enteredPin.isEmpty) return;
-    setState(() => _enteredPin = _enteredPin.substring(0, _enteredPin.length - 1));
+    if (_isVerifying || _isError || _isSuccess || _enteredPin.isEmpty) return;
+    setState(() {
+      _enteredPin = _enteredPin.substring(0, _enteredPin.length - 1);
+    });
   }
 
   Future<void> _verify() async {
@@ -71,6 +76,12 @@ class _PinVerifyDialogState extends State<PinVerifyDialog> {
     if (!mounted) return;
 
     if (matched) {
+      setState(() {
+        _isVerifying = false;
+        _isSuccess = true;
+      });
+      await Future<void>.delayed(const Duration(milliseconds: 350));
+      if (!mounted) return;
       Navigator.pop(context, true);
       return;
     }
@@ -93,6 +104,7 @@ class _PinVerifyDialogState extends State<PinVerifyDialog> {
   Widget build(BuildContext context) {
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
     final TextTheme textTheme = Theme.of(context).textTheme;
+    final bool inputDisabled = _isVerifying || _isError || _isSuccess;
 
     return Dialog(
       insetPadding: const EdgeInsets.all(AppDimensions.paddingMedium),
@@ -107,12 +119,32 @@ class _PinVerifyDialogState extends State<PinVerifyDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircleAvatar(
-              radius: 32,
-              backgroundColor: colorScheme.primaryContainer,
-              child: Text(
-                widget.profileEmoji,
-                style: const TextStyle(fontSize: 28),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _isSuccess
+                    ? colorScheme.primary
+                    : colorScheme.primaryContainer,
+              ),
+              child: Center(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  child: _isSuccess
+                      ? Icon(
+                          Icons.check_rounded,
+                          key: const ValueKey('check'),
+                          color: colorScheme.onPrimary,
+                          size: 32,
+                        )
+                      : Text(
+                          widget.profileEmoji,
+                          key: const ValueKey('emoji'),
+                          style: const TextStyle(fontSize: 28),
+                        ),
+                ),
               ),
             ),
             const SizedBox(height: AppDimensions.paddingMedium),
@@ -135,34 +167,38 @@ class _PinVerifyDialogState extends State<PinVerifyDialog> {
               isError: _isError,
             ),
             const SizedBox(height: AppDimensions.paddingSmall),
-            AnimatedOpacity(
-              duration: const Duration(milliseconds: 300),
-              opacity: _isError ? 1.0 : 0.0,
-              child: Text(
-                AppStrings.wrongPin,
-                style: textTheme.bodySmall?.copyWith(
-                  color: colorScheme.error,
+            SizedBox(
+              height: 20,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: _isError
+                    ? Text(
+                        AppStrings.wrongPin,
+                        key: const ValueKey('error'),
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.error,
+                        ),
+                      )
+                    : const SizedBox.shrink(key: ValueKey('empty')),
+              ),
+            ),
+            const SizedBox(height: AppDimensions.paddingMedium),
+            IgnorePointer(
+              ignoring: inputDisabled,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 200),
+                opacity: inputDisabled ? 0.4 : 1.0,
+                child: NumberPad(
+                  onKeyPressed: _onKeyPressed,
+                  onBackspace: _onBackspace,
                 ),
               ),
             ),
             const SizedBox(height: AppDimensions.paddingMedium),
-            if (_isVerifying)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: AppDimensions.paddingLarge),
-                child: SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              )
-            else
-              NumberPad(
-                onKeyPressed: _onKeyPressed,
-                onBackspace: _onBackspace,
-              ),
-            const SizedBox(height: AppDimensions.paddingMedium),
             TextButton(
-              onPressed: () => Navigator.pop(context, false),
+              onPressed: inputDisabled
+                  ? null
+                  : () => Navigator.pop(context, false),
               child: const Text(AppStrings.cancel),
             ),
           ],

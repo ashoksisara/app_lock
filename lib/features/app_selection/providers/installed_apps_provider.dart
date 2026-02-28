@@ -20,7 +20,7 @@ class InstalledAppsNotifier extends AsyncNotifier<List<InstalledApp>> {
   Future<List<InstalledApp>> _fetchApps() async {
     try {
       final List<AppInfo> appInfos = await InstalledApps.getInstalledApps(
-        excludeSystemApps: true,
+        excludeSystemApps: false,
         withIcon: true,
       );
 
