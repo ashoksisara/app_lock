@@ -15,7 +15,8 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends State<SettingsScreen>
+    with WidgetsBindingObserver {
   bool _useBiometrics = true;
   bool _intruderDetection = false;
   bool _lockOnScreenOff = true;
@@ -25,7 +26,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadServiceState();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadServiceState();
+    }
   }
 
   Future<void> _loadServiceState() async {
@@ -98,6 +113,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
       title: AppStrings.sectionSecurity,
       children: [
         SettingsTile(
+          icon: _serviceRunning
+              ? Icons.verified_user
+              : Icons.shield_outlined,
+          title: _serviceRunning
+              ? AppStrings.serviceRunning
+              : AppStrings.activateProtection,
+          subtitle: _serviceRunning
+              ? AppStrings.protectionActive
+              : AppStrings.serviceNotRunning,
+          toggleValue: _serviceRunning,
+          onToggleChanged: _toggleService,
+        ),
+        SettingsTile(
           icon: Icons.pin,
           title: AppStrings.changePIN,
         ),
@@ -138,13 +166,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           onToggleChanged: (bool value) {
             setState(() => _lockOnScreenOff = value);
           },
-        ),
-        SettingsTile(
-          icon: Icons.miscellaneous_services,
-          title: AppStrings.backgroundService,
-          subtitle: _serviceRunning ? 'Running' : 'Stopped',
-          toggleValue: _serviceRunning,
-          onToggleChanged: _toggleService,
         ),
       ],
     );

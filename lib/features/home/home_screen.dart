@@ -1,4 +1,4 @@
-// Home screen — displays profile cards, service status toggle, and add-profile FAB
+// Home screen — displays profile cards, permission warnings, and add-profile FAB
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -21,7 +21,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObserver {
   bool _hasAccessibilityPermission = false;
   bool _hasOverlayPermission = false;
-  bool _isServiceRunning = false;
   bool _checkingStatus = true;
   bool _permissionDialogShown = false;
 
@@ -50,12 +49,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
       final bool accessibility =
           await AppLockService.isAccessibilityServiceEnabled();
       final bool overlay = await AppLockService.hasOverlayPermission();
-      final bool running = await AppLockService.isServiceRunning();
       if (mounted) {
         setState(() {
           _hasAccessibilityPermission = accessibility;
           _hasOverlayPermission = overlay;
-          _isServiceRunning = running;
           _checkingStatus = false;
         });
         if ((!accessibility || !overlay) && !_permissionDialogShown) {
@@ -68,11 +65,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     } catch (_) {
       if (mounted) setState(() => _checkingStatus = false);
     }
-  }
-
-  Future<void> _stopService() async {
-    await AppLockService.setServiceEnabled(enabled: false);
-    _checkStatus();
   }
 
   @override
@@ -100,17 +92,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
           ),
         ],
       ),
-      body: profileState.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (Object error, _) => _buildErrorState(
-          context,
-          colorScheme,
-          textTheme,
-          onRetry: () => ref.invalidate(profileListProvider),
-        ),
-        data: (List<UserProfile> profiles) => profiles.isEmpty
-            ? _buildEmptyState(colorScheme, textTheme)
-            : _buildProfileList(context, ref, colorScheme, textTheme, profiles),
+      body: Column(
+        children: [
+          _buildPermissionWarning(colorScheme, textTheme),
+          Expanded(
+            child: profileState.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (Object error, _) => _buildErrorState(
+                context,
+                colorScheme,
+                textTheme,
+                onRetry: () => ref.invalidate(profileListProvider),
+              ),
+              data: (List<UserProfile> profiles) => profiles.isEmpty
+                  ? _buildEmptyState(colorScheme, textTheme)
+                  : _buildProfileList(context, ref, colorScheme, textTheme, profiles),
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
@@ -145,15 +144,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     );
   }
 
-  // --- Service Banner ---
+  // --- Permission Warning Banner ---
 
-  Widget _buildServiceBanner(ColorScheme colorScheme, TextTheme textTheme) {
-    if (_checkingStatus) return const SizedBox.shrink();
+  Widget _buildPermissionWarning(ColorScheme colorScheme, TextTheme textTheme) {
+    if (_checkingStatus || (_hasAccessibilityPermission && _hasOverlayPermission)) {
+      return const SizedBox.shrink();
+    }
 
-    if (!_hasAccessibilityPermission || !_hasOverlayPermission) {
-      return Card(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppDimensions.paddingLarge,
+        AppDimensions.paddingLarge,
+        AppDimensions.paddingLarge,
+        0,
+      ),
+      child: Card(
         color: colorScheme.errorContainer,
-        margin: const EdgeInsets.only(bottom: AppDimensions.paddingMedium),
+        margin: EdgeInsets.zero,
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: () {
@@ -180,83 +187,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
             ),
           ),
         ),
-      );
-    }
-
-    final bool isActive = _isServiceRunning;
-
-    return Card(
-      color: isActive
-          ? colorScheme.primaryContainer
-          : colorScheme.surfaceContainerHighest,
-      margin: const EdgeInsets.only(bottom: AppDimensions.paddingMedium),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimensions.paddingMedium,
-          vertical: 12,
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isActive
-                    ? colorScheme.primary
-                    : colorScheme.outlineVariant,
-              ),
-              child: Icon(
-                isActive ? Icons.verified_user : Icons.shield_outlined,
-                color: isActive
-                    ? colorScheme.onPrimary
-                    : colorScheme.onSurfaceVariant,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: AppDimensions.paddingMedium),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    isActive
-                        ? AppStrings.serviceRunning
-                        : AppStrings.activateProtection,
-                    style: textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: isActive
-                          ? colorScheme.onPrimaryContainer
-                          : colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    isActive
-                        ? AppStrings.protectionActive
-                        : AppStrings.serviceNotRunning,
-                    style: textTheme.bodySmall?.copyWith(
-                      color: isActive
-                          ? colorScheme.onPrimaryContainer.withValues(alpha: 0.7)
-                          : colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Switch(
-              value: isActive,
-              onChanged: (_) => isActive ? _stopService() : _startService(),
-            ),
-          ],
-        ),
       ),
     );
-  }
-
-  Future<void> _startService() async {
-    await AppLockService.setServiceEnabled(enabled: true);
-    _checkStatus();
   }
 
   Widget _buildEmptyState(ColorScheme colorScheme, TextTheme textTheme) {
@@ -358,17 +290,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
       padding: const EdgeInsets.all(AppDimensions.paddingLarge).copyWith(
         bottom: AppDimensions.paddingLarge + 80,
       ),
-      itemCount: profiles.length + 1,
+      itemCount: profiles.length,
       itemBuilder: (BuildContext context, int index) {
-        if (index == 0) {
-          return _buildServiceBanner(colorScheme, textTheme);
-        }
-        final int profileIndex = index - 1;
-        final UserProfile profile = profiles[profileIndex];
+        final UserProfile profile = profiles[index];
         final int count = lockedCounts[profile.id] ?? 0;
         return Padding(
           padding: EdgeInsets.only(
-            bottom: profileIndex < profiles.length - 1
+            bottom: index < profiles.length - 1
                 ? AppDimensions.paddingMedium
                 : 0,
           ),
@@ -376,7 +304,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
             emoji: profile.emoji,
             name: profile.name,
             lockedAppsCount: count,
-            backgroundColor: cardColors[profileIndex % cardColors.length],
+            backgroundColor: cardColors[index % cardColors.length],
             onTap: () => _showProfileSheet(context, ref, profile, colorScheme),
           ),
         );
