@@ -111,6 +111,16 @@ class AppStrings {
   static const String enterPinToContinue = 'Enter PIN to continue';
   static const String wrongPin = 'Wrong PIN. Try again.';
 
+  // Profile Edit & Change PIN
+  static const String editProfileOption = 'Edit Profile';
+  static const String changePinOption = 'Change PIN';
+  static const String profileUpdated = 'Profile updated';
+  static const String enterCurrentPin = 'Enter current PIN';
+  static const String enterNewPin = 'Enter new PIN';
+  static const String confirmNewPin = 'Confirm new PIN';
+  static const String pinChanged = 'PIN changed successfully';
+  static const String newPinsDoNotMatch = 'New PINs do not match. Try again.';
+
   // Installed Apps
   static const String loadingApps = 'Loading installed apps...';
   static const String noAppsFound = 'No apps found';

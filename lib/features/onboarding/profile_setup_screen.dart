@@ -11,7 +11,18 @@ import 'widgets/pin_setup_field.dart';
 import 'widgets/step_indicator.dart';
 
 class ProfileSetupScreen extends ConsumerStatefulWidget {
-  const ProfileSetupScreen({super.key});
+  final int? editProfileId;
+  final String? editName;
+  final String? editEmoji;
+
+  const ProfileSetupScreen({
+    super.key,
+    this.editProfileId,
+    this.editName,
+    this.editEmoji,
+  });
+
+  bool get isEditMode => editProfileId != null;
 
   @override
   ConsumerState<ProfileSetupScreen> createState() =>
@@ -43,6 +54,10 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       case 1:
         if (!_isNameValid) {
           setState(() => _nameError = AppStrings.profileNameRequired);
+          return;
+        }
+        if (_isEditMode) {
+          await _saveEdit();
           return;
         }
         _goToStep(2);
@@ -145,9 +160,46 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     }
   }
 
+  Future<void> _saveEdit() async {
+    setState(() => _isSaving = true);
+    try {
+      await ref.read(profileListProvider.notifier).updateProfile(
+            id: widget.editProfileId!,
+            name: _nameController.text.trim(),
+            emoji: _selectedEmoji,
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(AppStrings.profileUpdated),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.paddingSmall),
+          ),
+        ),
+      );
+      Navigator.pop(context);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to update profile. Please try again.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  bool get _isEditMode => widget.isEditMode;
+
   @override
   void initState() {
     super.initState();
+    if (_isEditMode) {
+      _selectedEmoji = widget.editEmoji ?? '🧑';
+      _nameController.text = widget.editName ?? '';
+    }
     _nameController.addListener(() {
       if (_nameError.isNotEmpty && _nameController.text.trim().isNotEmpty) {
         setState(() => _nameError = '');
@@ -176,12 +228,12 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             icon: const Icon(Icons.arrow_back),
             onPressed: _handleBack,
           ),
-          title: const Text(AppStrings.newProfile),
+          title: Text(_isEditMode ? AppStrings.editProfile : AppStrings.newProfile),
         ),
         body: SafeArea(
           child: Column(
             children: [
-              StepIndicator(currentStep: _currentStep),
+              if (!_isEditMode) StepIndicator(currentStep: _currentStep),
               Expanded(
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
@@ -341,7 +393,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   }
 
   Widget _buildBottomButton(BuildContext context) {
-    final bool isFinalStep = _currentStep == 3;
+    final bool isFinalStep = _isEditMode || _currentStep == 3;
     final bool isEnabled = !_isSaving &&
         switch (_currentStep) {
           1 => true,

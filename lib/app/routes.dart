@@ -29,8 +29,14 @@ class AppRoutes {
           builder: (_) => const SettingsScreen(),
         );
       case profileSetup:
+        final Map<String, dynamic>? args =
+            routeSettings.arguments as Map<String, dynamic>?;
         return MaterialPageRoute(
-          builder: (_) => const ProfileSetupScreen(),
+          builder: (_) => ProfileSetupScreen(
+            editProfileId: args?['id'] as int?,
+            editName: args?['name'] as String?,
+            editEmoji: args?['emoji'] as String?,
+          ),
         );
       case appSelection:
         final int profileId = routeSettings.arguments as int;

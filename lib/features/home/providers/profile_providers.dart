@@ -38,6 +38,34 @@ class ProfileListNotifier extends AsyncNotifier<List<UserProfile>> {
     return created.id!;
   }
 
+  Future<void> updateProfile({
+    required int id,
+    required String name,
+    required String emoji,
+  }) async {
+    final ProfileRepository repository = ref.read(profileRepositoryProvider);
+    try {
+      await repository.updateProfile(id: id, name: name, emoji: emoji);
+      if (!ref.mounted) return;
+      final List<UserProfile> profiles = await repository.getAllProfiles();
+      if (!ref.mounted) return;
+      state = AsyncData(profiles);
+    } catch (error, stackTrace) {
+      debugPrint('Failed to update profile: $error');
+      if (!ref.mounted) return;
+      state = AsyncError(error, stackTrace);
+    }
+  }
+
+  Future<void> changePin(int id, String newPin) async {
+    final ProfileRepository repository = ref.read(profileRepositoryProvider);
+    try {
+      await repository.changePin(id, newPin);
+    } catch (error) {
+      debugPrint('Failed to change PIN: $error');
+    }
+  }
+
   Future<void> deleteProfile(int id) async {
     final ProfileRepository repository =
         ref.read(profileRepositoryProvider);

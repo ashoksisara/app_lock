@@ -43,6 +43,32 @@ class ProfileRepository {
     return map != null ? UserProfile.fromMap(map) : null;
   }
 
+  Future<UserProfile> updateProfile({
+    required int id,
+    required String name,
+    required String emoji,
+  }) async {
+    final UserProfile? existing = await getProfileById(id);
+    if (existing == null) throw Exception('Profile not found');
+    final UserProfile updated = existing.copyWith(
+      name: name.trim(),
+      emoji: emoji,
+      updatedAt: DateTime.now(),
+    );
+    await _db.update(DatabaseService.tableProfiles, updated.toMap(), id: id);
+    return updated;
+  }
+
+  Future<void> changePin(int id, String newPin) async {
+    final UserProfile? existing = await getProfileById(id);
+    if (existing == null) throw Exception('Profile not found');
+    final UserProfile updated = existing.copyWith(
+      hashedPin: PinHasher.hash(newPin),
+      updatedAt: DateTime.now(),
+    );
+    await _db.update(DatabaseService.tableProfiles, updated.toMap(), id: id);
+  }
+
   Future<void> deleteProfile(int id) async {
     await _db.delete(DatabaseService.tableProfiles, id);
   }

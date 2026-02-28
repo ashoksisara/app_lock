@@ -7,6 +7,7 @@ import '../../core/constants/app_dimensions.dart';
 import '../../core/constants/app_strings.dart';
 import '../../models/user_profile.dart';
 import '../../services/app_lock_service.dart';
+import '../../shared/widgets/change_pin_dialog.dart';
 import '../../shared/widgets/pin_verify_dialog.dart';
 import 'providers/profile_providers.dart';
 import 'widgets/profile_card.dart';
@@ -362,6 +363,56 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                 ),
                 const SizedBox(height: AppDimensions.paddingLarge),
                 ListTile(
+                  leading: const Icon(Icons.edit_outlined),
+                  title: const Text(AppStrings.editProfileOption),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () async {
+                    Navigator.pop(sheetContext);
+                    final bool verified = await showPinVerifyDialog(
+                      context,
+                      profileId: profile.id!,
+                      profileName: profile.name,
+                      profileEmoji: profile.emoji,
+                    );
+                    if (!verified || !context.mounted) return;
+                    Navigator.pushNamed(
+                      context,
+                      AppRoutes.profileSetup,
+                      arguments: {
+                        'id': profile.id,
+                        'name': profile.name,
+                        'emoji': profile.emoji,
+                      },
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.lock_outline),
+                  title: const Text(AppStrings.changePinOption),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () async {
+                    Navigator.pop(sheetContext);
+                    final bool changed = await showChangePinDialog(
+                      context,
+                      profileId: profile.id!,
+                      profileName: profile.name,
+                      profileEmoji: profile.emoji,
+                    );
+                    if (!changed || !context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text(AppStrings.pinChanged),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppDimensions.paddingSmall,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
                   leading: const Icon(Icons.apps),
                   title: const Text(AppStrings.selectAppsFor),
                   trailing: const Icon(Icons.chevron_right),
@@ -381,6 +432,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                     );
                   },
                 ),
+                const Divider(height: 1),
                 ListTile(
                   leading: Icon(Icons.delete_outline, color: colorScheme.error),
                   title: Text(
