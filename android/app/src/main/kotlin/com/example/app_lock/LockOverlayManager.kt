@@ -48,10 +48,20 @@ class LockOverlayManager(private val context: Context) {
     private var outlineColor = Color.parseColor("#79747E")
     private var surfaceVariantColor = Color.parseColor("#E7E0EC")
 
-    val isShowing: Boolean get() = overlayView != null
+    val isShowing: Boolean get() = overlayView != null && overlayView?.isAttachedToWindow == true
+
+    val isDetached: Boolean get() = overlayView != null && overlayView?.isAttachedToWindow != true
 
     fun show(packageName: String, profileList: List<ProfileData>) {
-        if (overlayView != null) return
+        if (overlayView != null && overlayView?.isAttachedToWindow == true) {
+            Log.d(TAG, "Overlay already attached, skipping show")
+            return
+        }
+
+        if (overlayView != null) {
+            Log.d(TAG, "Overlay view exists but detached — cleaning up before re-show")
+            dismiss()
+        }
 
         packageNameExtra = packageName
         profiles = profileList
@@ -88,7 +98,7 @@ class LockOverlayManager(private val context: Context) {
                 WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
                 WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
                 WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
-            PixelFormat.OPAQUE
+            PixelFormat.TRANSLUCENT
         )
         params.gravity = Gravity.CENTER
 

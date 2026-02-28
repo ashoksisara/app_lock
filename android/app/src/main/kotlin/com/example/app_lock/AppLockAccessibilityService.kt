@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.provider.Settings
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
@@ -45,6 +46,7 @@ class AppLockAccessibilityService : AccessibilityService() {
     private var lockOverlay: LockOverlayManager? = null
     private var lastDbRefresh = 0L
     private var lastForegroundPackage: String? = null
+    private var launcherPackages = emptySet<String>()
 
     private val unlockReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -69,6 +71,7 @@ class AppLockAccessibilityService : AccessibilityService() {
         lockDatabase = LockDatabase(this).also { it.open() }
         lockOverlay = LockOverlayManager(this)
         lastDbRefresh = System.currentTimeMillis()
+        launcherPackages = queryLauncherPackages()
 
         LocalBroadcastManager.getInstance(this)
             .registerReceiver(unlockReceiver, IntentFilter(ACTION_UNLOCK_SUCCESS))
@@ -79,8 +82,7 @@ class AppLockAccessibilityService : AccessibilityService() {
             registerReceiver(screenOffReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
         }
 
-        val protectionOn = isProtectionEnabled()
-        Log.d(TAG, "Accessibility service connected — protection enabled: $protectionOn")
+        Log.d(TAG, "Accessibility service connected — launchers: $launcherPackages")
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -88,12 +90,8 @@ class AppLockAccessibilityService : AccessibilityService() {
 
         val pkg = event.packageName?.toString() ?: return
 
-        if (!isProtectionEnabled()) {
-            Log.d(TAG, "Event for $pkg ignored — protection disabled")
-            return
-        }
+        if (!isProtectionEnabled()) return
 
-        Log.d(TAG, "Window changed to: $pkg")
         handleForegroundApp(pkg)
     }
 
@@ -122,6 +120,15 @@ class AppLockAccessibilityService : AccessibilityService() {
         return prefs.getBoolean(KEY_SERVICE_ENABLED, false)
     }
 
+    private fun queryLauncherPackages(): Set<String> {
+        val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+        val resolveInfos = packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
+        return resolveInfos
+            .map { it.activityInfo.packageName }
+            .filter { it != "com.android.settings" && it != packageName }
+            .toSet()
+    }
+
     private fun handleForegroundApp(foreground: String) {
         val db = lockDatabase ?: return
 
@@ -135,32 +142,74 @@ class AppLockAccessibilityService : AccessibilityService() {
             return
         }
 
-        if (foreground == lastForegroundPackage && lockOverlay?.isShowing == true) return
+        if (lockOverlay?.isDetached == true) {
+            Log.d(TAG, "Overlay detached by system — cleaning up and re-evaluating $foreground")
+            lockOverlay?.dismiss()
+            val targetPkg = lastForegroundPackage ?: foreground
+            if (db.isPackageLocked(targetPkg)) {
+                val profiles = db.getLockedProfiles(targetPkg)
+                if (profiles.isNotEmpty()) {
+                    showLockOverlay(targetPkg, profiles)
+                }
+            }
+            if (foreground != targetPkg) {
+                handleWhileOverlayHidden(foreground, db, now)
+            }
+            return
+        }
 
-        if (foreground != lastForegroundPackage && lockOverlay?.isShowing == true) {
-            if (!db.isPackageLocked(foreground)) {
+        if (lockOverlay?.isShowing == true) {
+            handleWhileOverlayShowing(foreground, db, now)
+            return
+        }
+
+        handleWhileOverlayHidden(foreground, db, now)
+    }
+
+    private fun handleWhileOverlayShowing(foreground: String, db: LockDatabase, now: Long) {
+        if (foreground == lastForegroundPackage) return
+
+        if (launcherPackages.contains(foreground)) {
+            dismissOverlayIfShowing()
+            lastForegroundPackage = foreground
+            Log.d(TAG, "Launcher detected ($foreground) — dismissed overlay")
+            return
+        }
+
+        if (db.isPackageLocked(foreground)) {
+            val cooldownTime = cooldownMap[foreground]
+            if (cooldownTime != null && now - cooldownTime < DEFAULT_COOLDOWN_MS) {
                 dismissOverlayIfShowing()
                 lastForegroundPackage = foreground
                 return
             }
+            lockOverlay?.dismiss()
+            val profiles = db.getLockedProfiles(foreground)
+            if (profiles.isNotEmpty()) {
+                lastForegroundPackage = foreground
+                showLockOverlay(foreground, profiles)
+                Log.d(TAG, "Switched lock overlay to $foreground")
+                return
+            }
         }
 
+        Log.d(TAG, "Ignoring $foreground while overlay showing (ad/dialog/webview)")
+    }
+
+    private fun handleWhileOverlayHidden(foreground: String, db: LockDatabase, now: Long) {
         val cooldownTime = cooldownMap[foreground]
         if (cooldownTime != null && now - cooldownTime < DEFAULT_COOLDOWN_MS) {
-            dismissOverlayIfShowing()
             lastForegroundPackage = foreground
             return
         }
 
         if (!db.isPackageLocked(foreground)) {
-            dismissOverlayIfShowing()
             lastForegroundPackage = foreground
             return
         }
 
         val profiles = db.getLockedProfiles(foreground)
         if (profiles.isEmpty()) {
-            dismissOverlayIfShowing()
             lastForegroundPackage = foreground
             return
         }
@@ -174,14 +223,13 @@ class AppLockAccessibilityService : AccessibilityService() {
             lockOverlay?.show(packageName, profiles)
             Log.d(TAG, "Showed lock overlay for $packageName (${profiles.size} profiles)")
         } else {
-            Log.w(TAG, "Overlay permission not granted — cannot show lock screen for $packageName")
+            Log.w(TAG, "Overlay permission not granted — cannot show lock for $packageName")
         }
     }
 
     private fun dismissOverlayIfShowing() {
         if (lockOverlay?.isShowing == true) {
             lockOverlay?.dismiss()
-            Log.d(TAG, "Dismissed overlay — user navigated away")
         }
     }
 }
