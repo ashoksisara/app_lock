@@ -1,8 +1,10 @@
 // Settings screen — grouped sections for profiles, security, protection, appearance, about, and danger zone
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants/app_dimensions.dart';
 import '../../core/constants/app_strings.dart';
+import '../../services/app_lock_service.dart';
 import 'widgets/danger_zone_tile.dart';
 import 'widgets/settings_section.dart';
 import 'widgets/settings_tile.dart';
@@ -19,6 +21,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _intruderDetection = false;
   bool _lockOnScreenOff = true;
   bool _darkMode = false;
+  bool _serviceRunning = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadServiceState();
+  }
+
+  Future<void> _loadServiceState() async {
+    try {
+      final bool running = await AppLockService.isServiceRunning();
+      if (mounted) setState(() => _serviceRunning = running);
+    } catch (_) {}
+  }
+
+  Future<void> _toggleService(bool value) async {
+    try {
+      if (value) {
+        await AppLockService.startService();
+      } else {
+        await AppLockService.stopService();
+      }
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('service_enabled', value);
+      if (mounted) setState(() => _serviceRunning = value);
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -107,7 +136,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         SettingsTile(
           icon: Icons.timer_outlined,
           title: AppStrings.relockTiming,
-          subtitle: 'Immediately',
+          subtitle: '30 seconds',
         ),
         SettingsTile(
           icon: Icons.screen_lock_portrait,
@@ -120,7 +149,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         SettingsTile(
           icon: Icons.miscellaneous_services,
           title: AppStrings.backgroundService,
-          subtitle: 'Running',
+          subtitle: _serviceRunning ? 'Running' : 'Stopped',
+          toggleValue: _serviceRunning,
+          onToggleChanged: _toggleService,
         ),
       ],
     );
