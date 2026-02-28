@@ -1,9 +1,7 @@
 package com.example.app_lock
 
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.PowerManager
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -21,35 +19,23 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
-                    "startService" -> {
-                        val intent = Intent(this, AppMonitorService::class.java)
-                        startForegroundService(intent)
-                        result.success(true)
+                    "isAccessibilityServiceEnabled" -> {
+                        result.success(AppLockAccessibilityService.isEnabled(this))
                     }
-                    "stopService" -> {
-                        val intent = Intent(this, AppMonitorService::class.java)
-                        stopService(intent)
+                    "requestAccessibilityPermission" -> {
+                        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                        startActivity(intent)
                         result.success(true)
                     }
                     "isServiceRunning" -> {
-                        result.success(AppMonitorService.isRunning)
+                        val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
+                        val enabled = prefs.getBoolean("flutter.service_enabled", false)
+                        result.success(AppLockAccessibilityService.isRunning && enabled)
                     }
-                    "hasUsageStatsPermission" -> {
-                        result.success(UsageStatsHelper.hasPermission(this))
-                    }
-                    "requestUsageStatsPermission" -> {
-                        UsageStatsHelper.openPermissionSettings(this)
-                        result.success(true)
-                    }
-                    "isBatteryOptimizationDisabled" -> {
-                        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-                        result.success(pm.isIgnoringBatteryOptimizations(packageName))
-                    }
-                    "requestDisableBatteryOptimization" -> {
-                        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                            data = Uri.parse("package:$packageName")
-                        }
-                        startActivity(intent)
+                    "setServiceEnabled" -> {
+                        val enabled = call.argument<Boolean>("enabled") ?: false
+                        val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
+                        prefs.edit().putBoolean("flutter.service_enabled", enabled).apply()
                         result.success(true)
                     }
                     "hasOverlayPermission" -> {

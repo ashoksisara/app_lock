@@ -1,7 +1,6 @@
 package com.example.app_lock
 
 import android.animation.ObjectAnimator
-import android.app.NotificationManager
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
@@ -60,12 +59,9 @@ class LockActivity : ComponentActivity() {
             WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
         )
 
-        val nm = getSystemService(NotificationManager::class.java)
-        nm.cancel(AppMonitorService.LOCK_NOTIFICATION_ID)
-
         resolveThemeColors()
 
-        packageNameExtra = intent.getStringExtra(AppMonitorService.EXTRA_PACKAGE_NAME) ?: ""
+        packageNameExtra = intent.getStringExtra(AppLockAccessibilityService.EXTRA_PACKAGE_NAME) ?: ""
         val profilesJson = intent.getStringExtra("profiles_json") ?: "[]"
         profiles = parseProfiles(profilesJson)
 
@@ -402,8 +398,8 @@ class LockActivity : ComponentActivity() {
 
         if (hashed == profile.hashedPin) {
             wrongAttempts = 0
-            val intent = Intent(AppMonitorService.ACTION_UNLOCK_SUCCESS).apply {
-                putExtra(AppMonitorService.EXTRA_PACKAGE_NAME, packageNameExtra)
+            val intent = Intent(AppLockAccessibilityService.ACTION_UNLOCK_SUCCESS).apply {
+                putExtra(AppLockAccessibilityService.EXTRA_PACKAGE_NAME, packageNameExtra)
             }
             LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
             finish()
@@ -485,9 +481,6 @@ class LockActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        AppMonitorService.isLockActivityShowing = false
-        val nm = getSystemService(NotificationManager::class.java)
-        nm.cancel(AppMonitorService.LOCK_NOTIFICATION_ID)
         super.onDestroy()
     }
 

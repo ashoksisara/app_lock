@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_description">App Locker monitors which app is in the foreground to show a PIN lock screen when a protected app is opened.</string>
+</resources>

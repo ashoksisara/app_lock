@@ -19,12 +19,10 @@ class BootReceiver : BroadcastReceiver() {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val enabled = prefs.getBoolean(KEY_SERVICE_ENABLED, false)
 
-        if (enabled) {
-            Log.d(TAG, "Boot completed — starting AppMonitorService")
-            val serviceIntent = Intent(context, AppMonitorService::class.java)
-            context.startForegroundService(serviceIntent)
+        if (enabled && AppLockAccessibilityService.isEnabled(context)) {
+            Log.d(TAG, "Boot completed — accessibility service enabled, protection will resume automatically")
         } else {
-            Log.d(TAG, "Boot completed — service not enabled, skipping")
+            Log.d(TAG, "Boot completed — service not enabled or accessibility not granted, skipping")
         }
     }
 }

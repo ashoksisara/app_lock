@@ -1,6 +1,5 @@
 // Settings screen — grouped sections for profiles, security, protection, appearance, about, and danger zone
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants/app_dimensions.dart';
 import '../../core/constants/app_strings.dart';
@@ -38,13 +37,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _toggleService(bool value) async {
     try {
-      if (value) {
-        await AppLockService.startService();
-      } else {
-        await AppLockService.stopService();
-      }
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('service_enabled', value);
+      await AppLockService.setServiceEnabled(enabled: value);
       if (mounted) setState(() => _serviceRunning = value);
     } catch (_) {}
   }

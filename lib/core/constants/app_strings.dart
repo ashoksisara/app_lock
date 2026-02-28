@@ -121,28 +121,18 @@ class AppStrings {
 
   // Service Status
   static const String grantPermission = 'Grant Permission';
-  static const String usageAccessRequired = 'Usage Access Required';
-  static const String usageAccessDescription =
-      'App Locker needs usage access to detect when locked apps are opened.';
   static const String activateProtection = 'Activate Protection';
   static const String serviceNotRunning =
-      'Start the background service to protect your locked apps.';
-  static const String startService = 'Start Service';
-  static const String stopService = 'Stop Service';
+      'Enable protection to secure your locked apps.';
   static const String serviceRunning = 'Protection is active';
-
-  // Overlay Permission
-  static const String overlayPermissionRequired = 'Display Over Apps Required';
-  static const String overlayPermissionDescription =
-      'Allow App Locker to display the lock screen over other apps. Required on Xiaomi/MIUI devices.';
 
   // Permission Dialog
   static const String permissionsRequired = 'Permissions Required';
   static const String permissionsDialogDescription =
       'App Locker needs two permissions to protect your apps:';
-  static const String usageAccessTitle = 'Usage Access';
-  static const String usageAccessShort =
-      'Detect which app is currently open';
+  static const String accessibilityTitle = 'Accessibility Service';
+  static const String accessibilityShort =
+      'Detect when a locked app is opened';
   static const String overlayTitle = 'Display Over Apps';
   static const String overlayShort =
       'Show the lock screen on top of protected apps';

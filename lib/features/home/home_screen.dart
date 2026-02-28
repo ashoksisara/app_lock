@@ -1,7 +1,6 @@
 // Home screen — displays profile cards, service status toggle, and add-profile FAB
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../app/routes.dart';
 import '../../core/constants/app_dimensions.dart';
@@ -20,7 +19,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObserver {
-  bool _hasUsagePermission = false;
+  bool _hasAccessibilityPermission = false;
   bool _hasOverlayPermission = false;
   bool _isServiceRunning = false;
   bool _checkingStatus = true;
@@ -48,17 +47,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
 
   Future<void> _checkStatus() async {
     try {
-      final bool perm = await AppLockService.hasUsageStatsPermission();
+      final bool accessibility =
+          await AppLockService.isAccessibilityServiceEnabled();
       final bool overlay = await AppLockService.hasOverlayPermission();
       final bool running = await AppLockService.isServiceRunning();
       if (mounted) {
         setState(() {
-          _hasUsagePermission = perm;
+          _hasAccessibilityPermission = accessibility;
           _hasOverlayPermission = overlay;
           _isServiceRunning = running;
           _checkingStatus = false;
         });
-        if ((!perm || !overlay) && !_permissionDialogShown) {
+        if ((!accessibility || !overlay) && !_permissionDialogShown) {
           _permissionDialogShown = true;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) _showPermissionSheet();
@@ -71,9 +71,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   }
 
   Future<void> _stopService() async {
-    await AppLockService.stopService();
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('service_enabled', false);
+    await AppLockService.setServiceEnabled(enabled: false);
     _checkStatus();
   }
 
@@ -136,10 +134,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (_) => _PermissionSheet(
-        hasUsagePermission: _hasUsagePermission,
+        hasAccessibilityPermission: _hasAccessibilityPermission,
         hasOverlayPermission: _hasOverlayPermission,
-        onDone: () {
+        onDone: () async {
           Navigator.pop(context);
+          await AppLockService.setServiceEnabled(enabled: true);
           _checkStatus();
         },
       ),
@@ -151,7 +150,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   Widget _buildServiceBanner(ColorScheme colorScheme, TextTheme textTheme) {
     if (_checkingStatus) return const SizedBox.shrink();
 
-    if (!_hasUsagePermission || !_hasOverlayPermission) {
+    if (!_hasAccessibilityPermission || !_hasOverlayPermission) {
       return Card(
         color: colorScheme.errorContainer,
         margin: const EdgeInsets.only(bottom: AppDimensions.paddingMedium),
@@ -256,9 +255,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   }
 
   Future<void> _startService() async {
-    await AppLockService.startService();
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('service_enabled', true);
+    await AppLockService.setServiceEnabled(enabled: true);
     _checkStatus();
   }
 
@@ -535,12 +532,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
 
 class _PermissionSheet extends StatefulWidget {
   const _PermissionSheet({
-    required this.hasUsagePermission,
+    required this.hasAccessibilityPermission,
     required this.hasOverlayPermission,
     required this.onDone,
   });
 
-  final bool hasUsagePermission;
+  final bool hasAccessibilityPermission;
   final bool hasOverlayPermission;
   final VoidCallback onDone;
 
@@ -550,13 +547,13 @@ class _PermissionSheet extends StatefulWidget {
 
 class _PermissionSheetState extends State<_PermissionSheet>
     with WidgetsBindingObserver {
-  late bool _usageGranted;
+  late bool _accessibilityGranted;
   late bool _overlayGranted;
 
   @override
   void initState() {
     super.initState();
-    _usageGranted = widget.hasUsagePermission;
+    _accessibilityGranted = widget.hasAccessibilityPermission;
     _overlayGranted = widget.hasOverlayPermission;
     WidgetsBinding.instance.addObserver(this);
   }
@@ -575,17 +572,18 @@ class _PermissionSheetState extends State<_PermissionSheet>
   }
 
   Future<void> _refreshPermissions() async {
-    final bool usage = await AppLockService.hasUsageStatsPermission();
+    final bool accessibility =
+        await AppLockService.isAccessibilityServiceEnabled();
     final bool overlay = await AppLockService.hasOverlayPermission();
     if (mounted) {
       setState(() {
-        _usageGranted = usage;
+        _accessibilityGranted = accessibility;
         _overlayGranted = overlay;
       });
     }
   }
 
-  bool get _allGranted => _usageGranted && _overlayGranted;
+  bool get _allGranted => _accessibilityGranted && _overlayGranted;
 
   @override
   Widget build(BuildContext context) {
@@ -642,13 +640,13 @@ class _PermissionSheetState extends State<_PermissionSheet>
             const SizedBox(height: 24),
             _PermissionTile(
               step: '1',
-              icon: Icons.query_stats_rounded,
-              title: AppStrings.usageAccessTitle,
-              subtitle: AppStrings.usageAccessShort,
-              isGranted: _usageGranted,
-              onTap: _usageGranted
+              icon: Icons.accessibility_new_rounded,
+              title: AppStrings.accessibilityTitle,
+              subtitle: AppStrings.accessibilityShort,
+              isGranted: _accessibilityGranted,
+              onTap: _accessibilityGranted
                   ? null
-                  : () => AppLockService.requestUsageStatsPermission(),
+                  : () => AppLockService.requestAccessibilityPermission(),
             ),
             const SizedBox(height: 12),
             _PermissionTile(

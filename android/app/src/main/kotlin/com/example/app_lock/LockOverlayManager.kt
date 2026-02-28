@@ -395,8 +395,8 @@ class LockOverlayManager(private val context: Context) {
 
         if (hashed == profile.hashedPin) {
             wrongAttempts = 0
-            val intent = Intent(AppMonitorService.ACTION_UNLOCK_SUCCESS).apply {
-                putExtra(AppMonitorService.EXTRA_PACKAGE_NAME, packageNameExtra)
+            val intent = Intent(AppLockAccessibilityService.ACTION_UNLOCK_SUCCESS).apply {
+                putExtra(AppLockAccessibilityService.EXTRA_PACKAGE_NAME, packageNameExtra)
             }
             LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
             dismiss()
