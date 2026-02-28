@@ -1,25 +1,26 @@
 // Settings screen — grouped sections for profiles, security, protection, appearance, about, and danger zone
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_dimensions.dart';
 import '../../core/constants/app_strings.dart';
+import '../../core/providers/theme_provider.dart';
 import '../../services/app_lock_service.dart';
 import 'widgets/danger_zone_tile.dart';
 import 'widgets/settings_section.dart';
 import 'widgets/settings_tile.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen>
+class _SettingsScreenState extends ConsumerState<SettingsScreen>
     with WidgetsBindingObserver {
   bool _useBiometrics = true;
   bool _intruderDetection = false;
-  bool _darkMode = false;
   bool _serviceRunning = false;
 
   @override
@@ -141,15 +142,19 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Widget _buildAppearanceSection() {
+    final ThemeMode mode = ref.watch(themeModeProvider);
+    final bool isDark = mode == ThemeMode.dark ||
+        (mode == ThemeMode.system &&
+            MediaQuery.platformBrightnessOf(context) == Brightness.dark);
     return SettingsSection(
       title: AppStrings.sectionAppearance,
       children: [
         SettingsTile(
-          icon: Icons.dark_mode_outlined,
+          icon: isDark ? Icons.dark_mode : Icons.dark_mode_outlined,
           title: AppStrings.darkMode,
-          toggleValue: _darkMode,
+          toggleValue: isDark,
           onToggleChanged: (bool value) {
-            setState(() => _darkMode = value);
+            ref.read(themeModeProvider.notifier).setDarkMode(value);
           },
         ),
         SettingsTile(

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/app_colors.dart';
 import '../core/constants/app_strings.dart';
+import '../core/providers/theme_provider.dart';
 import '../features/app_selection/providers/installed_apps_provider.dart';
 import '../features/home/home_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
@@ -17,6 +18,7 @@ class App extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.read(installedAppsProvider);
+    final ThemeMode themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp(
       title: AppStrings.appName,
@@ -31,6 +33,7 @@ class App extends ConsumerWidget {
         colorSchemeSeed: AppColors.seedColor,
         brightness: Brightness.dark,
       ),
+      themeMode: themeMode,
       home: onboardingDone
           ? const HomeScreen()
           : const OnboardingScreen(),
