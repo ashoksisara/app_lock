@@ -11,7 +11,7 @@ import '../features/settings/settings_screen.dart';
 class AppRoutes {
   AppRoutes._();
 
-  static const String home = '/';
+  static const String home = '/home';
   static const String settings = '/settings';
   static const String profileSetup = '/profile-setup';
   static const String appSelection = '/app-selection';

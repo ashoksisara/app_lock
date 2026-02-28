@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/constants/app_colors.dart';
 import '../core/constants/app_strings.dart';
 import '../features/app_selection/providers/installed_apps_provider.dart';
+import '../features/home/home_screen.dart';
+import '../features/onboarding/onboarding_screen.dart';
 import 'routes.dart';
 
 class App extends ConsumerWidget {
@@ -29,7 +31,9 @@ class App extends ConsumerWidget {
         colorSchemeSeed: AppColors.seedColor,
         brightness: Brightness.dark,
       ),
-      initialRoute: onboardingDone ? AppRoutes.home : AppRoutes.onboarding,
+      home: onboardingDone
+          ? const HomeScreen()
+          : const OnboardingScreen(),
       onGenerateRoute: AppRoutes.onGenerateRoute,
     );
   }

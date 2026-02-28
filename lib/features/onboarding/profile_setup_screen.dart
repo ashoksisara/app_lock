@@ -109,11 +109,12 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     setState(() => _isSaving = true);
 
     try {
-      await ref.read(profileListProvider.notifier).addProfile(
-            name: _nameController.text.trim(),
-            emoji: _selectedEmoji,
-            pin: _pin,
-          );
+      final int profileId =
+          await ref.read(profileListProvider.notifier).addProfile(
+                name: _nameController.text.trim(),
+                emoji: _selectedEmoji,
+                pin: _pin,
+              );
 
       if (!mounted) return;
 
@@ -128,8 +129,9 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       );
       Navigator.pushNamedAndRemoveUntil(
         context,
-        AppRoutes.home,
+        AppRoutes.appSelection,
         (Route<dynamic> route) => false,
+        arguments: profileId,
       );
     } catch (_) {
       if (!mounted) return;

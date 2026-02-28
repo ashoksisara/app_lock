@@ -127,8 +127,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   void _showPermissionSheet() {
     showModalBottomSheet<void>(
       context: context,
-      isDismissible: true,
-      enableDrag: true,
+      isDismissible: false,
+      enableDrag: false,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -590,21 +590,15 @@ class _PermissionSheetState extends State<_PermissionSheet>
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
     final TextTheme textTheme = Theme.of(context).textTheme;
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 32,
-              height: 4,
-              decoration: BoxDecoration(
-                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 24),
+    return PopScope(
+      canPop: _allGranted,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 16),
             Container(
               width: 56,
               height: 56,
@@ -674,7 +668,8 @@ class _PermissionSheetState extends State<_PermissionSheet>
                 ),
               ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );
