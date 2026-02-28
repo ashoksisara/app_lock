@@ -19,7 +19,6 @@ class _SettingsScreenState extends State<SettingsScreen>
     with WidgetsBindingObserver {
   bool _useBiometrics = true;
   bool _intruderDetection = false;
-  bool _lockOnScreenOff = true;
   bool _darkMode = false;
   bool _serviceRunning = false;
 
@@ -74,8 +73,6 @@ class _SettingsScreenState extends State<SettingsScreen>
         padding: const EdgeInsets.all(AppDimensions.paddingMedium),
         child: Column(
           children: [
-            _buildProfilesSection(),
-            const SizedBox(height: AppDimensions.paddingLarge),
             _buildSecuritySection(),
             const SizedBox(height: AppDimensions.paddingLarge),
             _buildProtectionSection(),
@@ -89,22 +86,6 @@ class _SettingsScreenState extends State<SettingsScreen>
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildProfilesSection() {
-    return SettingsSection(
-      title: AppStrings.sectionProfiles,
-      children: [
-        SettingsTile(
-          icon: Icons.people_outline,
-          title: AppStrings.manageProfiles,
-        ),
-        SettingsTile(
-          icon: Icons.swap_horiz,
-          title: AppStrings.switchProfile,
-        ),
-      ],
     );
   }
 
@@ -124,10 +105,6 @@ class _SettingsScreenState extends State<SettingsScreen>
               : AppStrings.serviceNotRunning,
           toggleValue: _serviceRunning,
           onToggleChanged: _toggleService,
-        ),
-        SettingsTile(
-          icon: Icons.pin,
-          title: AppStrings.changePIN,
         ),
         SettingsTile(
           icon: Icons.fingerprint,
@@ -158,14 +135,6 @@ class _SettingsScreenState extends State<SettingsScreen>
           icon: Icons.timer_outlined,
           title: AppStrings.relockTiming,
           subtitle: '30 seconds',
-        ),
-        SettingsTile(
-          icon: Icons.screen_lock_portrait,
-          title: AppStrings.lockOnScreenOff,
-          toggleValue: _lockOnScreenOff,
-          onToggleChanged: (bool value) {
-            setState(() => _lockOnScreenOff = value);
-          },
         ),
       ],
     );
