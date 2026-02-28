@@ -108,6 +108,11 @@ class DatabaseService {
     return db.query(table, where: where, whereArgs: whereArgs);
   }
 
+  Future<int> deleteAll(String table) async {
+    final Database db = await database;
+    return db.delete(table);
+  }
+
   Future<int> deleteWhere(
     String table, {
     required String where,

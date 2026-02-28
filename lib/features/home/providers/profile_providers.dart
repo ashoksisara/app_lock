@@ -98,6 +98,20 @@ class ProfileListNotifier extends AsyncNotifier<List<UserProfile>> {
     return repository.getLockedApps(profileId);
   }
 
+  Future<void> resetAll() async {
+    final ProfileRepository repository = ref.read(profileRepositoryProvider);
+    try {
+      await repository.resetAllProfiles();
+      if (!ref.mounted) return;
+      state = const AsyncData([]);
+      ref.invalidate(lockedAppsCountProvider);
+    } catch (error, stackTrace) {
+      debugPrint('Failed to reset profiles: $error');
+      if (!ref.mounted) return;
+      state = AsyncError(error, stackTrace);
+    }
+  }
+
   Future<void> reload() async {
     ref.invalidateSelf();
   }

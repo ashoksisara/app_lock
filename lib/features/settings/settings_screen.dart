@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/providers/theme_provider.dart';
+import '../../features/home/providers/profile_providers.dart';
 import '../../services/app_lock_service.dart';
 import 'widgets/danger_zone_tile.dart';
 import 'widgets/settings_section.dart';
@@ -217,6 +218,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                 icon: Icons.restart_alt,
                 title: AppStrings.resetAllProfiles,
                 subtitle: AppStrings.resetAllProfilesSub,
+                onTap: () => _confirmResetAll(colorScheme),
               ),
               DangerZoneTile(
                 icon: Icons.lock_open,
@@ -227,6 +229,47 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
           ),
         ),
       ],
+    );
+  }
+
+  void _confirmResetAll(ColorScheme colorScheme) {
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          icon: Icon(Icons.warning_rounded, color: colorScheme.error, size: 32),
+          title: const Text(AppStrings.resetAllProfiles),
+          content: const Text(AppStrings.resetAllConfirm),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text(AppStrings.cancel),
+            ),
+            FilledButton(
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+                await ref.read(profileListProvider.notifier).resetAll();
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text(AppStrings.resetAllDone),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppDimensions.paddingSmall),
+                    ),
+                  ),
+                );
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: colorScheme.error,
+                foregroundColor: colorScheme.onError,
+              ),
+              child: const Text(AppStrings.resetAllProfiles),
+            ),
+          ],
+        );
+      },
     );
   }
 }

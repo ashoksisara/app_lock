@@ -34,6 +34,9 @@ class AppStrings {
   static const String rateApp = 'Rate the App';
   static const String resetAllProfiles = 'Reset All Profiles';
   static const String resetAllProfilesSub = 'Permanently delete all profiles and locked apps';
+  static const String resetAllConfirm =
+      'This will permanently delete all profiles and their locked apps. This action cannot be undone.';
+  static const String resetAllDone = 'All profiles have been reset';
   static const String uninstallProtection = 'Uninstall Protection';
   static const String uninstallProtectionSub = 'Allow app to be uninstalled';
 

@@ -73,6 +73,11 @@ class ProfileRepository {
     await _db.delete(DatabaseService.tableProfiles, id);
   }
 
+  Future<void> resetAllProfiles() async {
+    await _db.deleteAll(DatabaseService.tableLockedApps);
+    await _db.deleteAll(DatabaseService.tableProfiles);
+  }
+
   Future<bool> verifyPin(int profileId, String pin) async {
     final UserProfile? profile = await getProfileById(profileId);
     if (profile == null) return false;
