@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_dimensions.dart';
 import '../../core/constants/app_strings.dart';
+import '../../core/providers/relock_timing_provider.dart';
 import '../../core/providers/theme_provider.dart';
 import '../../features/home/providers/profile_providers.dart';
 import '../../services/app_lock_service.dart';
@@ -130,15 +131,80 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
   }
 
   Widget _buildProtectionSection() {
+    final int currentMs = ref.watch(relockTimingProvider);
+    final String label = relockOptions[currentMs] ?? AppStrings.relock1Min;
+
     return SettingsSection(
       title: AppStrings.sectionProtection,
       children: [
         SettingsTile(
           icon: Icons.timer_outlined,
           title: AppStrings.relockTiming,
-          subtitle: '30 seconds',
+          subtitle: label,
+          onTap: () => _showRelockTimingSheet(currentMs),
         ),
       ],
+    );
+  }
+
+  void _showRelockTimingSheet(int currentMs) {
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppDimensions.cardRadius),
+        ),
+      ),
+      isScrollControlled: true,
+      builder: (BuildContext sheetContext) {
+        return SafeArea(
+          child: DraggableScrollableSheet(
+            expand: false,
+            initialChildSize: 0.56,
+            maxChildSize: 0.9,
+            minChildSize: 0.4,
+            builder: (BuildContext context, ScrollController scrollController) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+                    child: Text(
+                      AppStrings.relockTiming,
+                      style:
+                          Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView(
+                      controller: scrollController,
+                      shrinkWrap: true,
+                      children: relockOptions.entries
+                          .map((MapEntry<int, String> entry) {
+                        return RadioListTile<int>(
+                          title: Text(entry.value),
+                          value: entry.key,
+                          groupValue: currentMs,
+                          onChanged: (int? value) {
+                            if (value != null) {
+                              ref
+                                  .read(relockTimingProvider.notifier)
+                                  .setTiming(value);
+                              Navigator.pop(sheetContext);
+                            }
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
     );
   }
 

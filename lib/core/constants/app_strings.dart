@@ -26,6 +26,13 @@ class AppStrings {
   static const String intruderDetectionSub = 'Photo on wrong PIN attempts';
   static const String relockTiming = 'Re-lock Timing';
   static const String lockOnScreenOff = 'Lock on Screen Off';
+  static const String relockImmediately = 'Lock immediately';
+  static const String relock1Min = '1 minute';
+  static const String relock5Min = '5 minutes';
+  static const String relock15Min = '15 minutes';
+  static const String relock30Min = '30 minutes';
+  static const String relock1Hour = '1 hour';
+  static const String relockUntilScreenOff = 'Until screen off';
   static const String backgroundService = 'Background Service';
   static const String darkMode = 'Dark Mode';
   static const String appLanguage = 'App Language';

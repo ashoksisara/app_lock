@@ -408,7 +408,7 @@ class LockOverlayManager(private val context: Context) {
             val intent = Intent(AppLockAccessibilityService.ACTION_UNLOCK_SUCCESS).apply {
                 putExtra(AppLockAccessibilityService.EXTRA_PACKAGE_NAME, packageNameExtra)
             }
-            LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
+            LocalBroadcastManager.getInstance(context).sendBroadcastSync(intent)
             dismiss()
         } else {
             wrongAttempts++
