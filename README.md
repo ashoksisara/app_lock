@@ -18,8 +18,6 @@ A Flutter + Kotlin Android app that lets two people share one device while keepi
 
 **Settings** — Re-lock timing configuration, dark mode toggle, theme color selection, change PIN flow (requires current PIN verification), and a danger zone for full reset.
 
-**Boot Persistence** — `BootReceiver` re-enables protection after device restarts.
-
 **Biometric Auth (planned)** — `local_auth` dependency is included; biometric unlock is declared in settings but not yet wired.
 
 ---
